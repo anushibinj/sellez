@@ -10,8 +10,12 @@
 
 App requirement
 
+- When a logged out user visits the site, they should see the landing page which explains about the app briefly. And show an action button to enter their community's marketplace.
+- Make the application's frontend design "loud" about the privacy focus. Mention in places where appropriate that their id/info is not being shared with anyone else (for example, when starting a chat with some other user, when posting an ad listing, etc.)
 - For every transaction in the app, there should be e-mail notifications for involved users.
 - For every transaction, there should be detailed audit logs that the super admin and community admin can see.
+- Users should be authorized using e-mail OTP. There is no other way to sign up 100s of different organization types. Once the user logs in, the browser session should be persisted until they manually log out. When user signs up for the first time, ask their name (mark it as optional).
+- The user's organization/community/domain should be based on the email domain. That is the only source of truth for any user's community info. If they login with a user@company.com domain, they belong to the company.com community.
 
 As a superadmin,
 
@@ -38,7 +42,7 @@ As a community admin,
 
 ## Tech Stack
 
-- Backend - Spring Boot
+- Backend - Spring Boot with Flyway for databse
 - Frontend - React JS (if there are better SSR frameworks, choose them instead)
 - Design - impeccable design skill, tailwind for components
 - Database - PostgreSQL
