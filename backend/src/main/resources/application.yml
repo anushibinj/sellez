@@ -63,6 +63,8 @@ sellez:
     sns-topic-arn: ${SNS_TOPIC_ARN:}
   listing:
     max-images: ${LISTING_MAX_IMAGES:6}
+    currencies: ${LISTING_CURRENCIES:USD,INR,EUR,GBP,AED,CAD,AUD}
+    default-currency: ${LISTING_DEFAULT_CURRENCY:USD}
   chat:
     max-image-bytes: ${CHAT_MAX_IMAGE_BYTES:5242880}
   jobs:

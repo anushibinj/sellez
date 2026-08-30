@@ -196,6 +196,7 @@ public class ListingService {
         listing.setTitle(TextSanitizer.sanitize(request.title()));
         listing.setDescription(TextSanitizer.sanitize(request.description()));
         listing.setPrice(request.price());
+        listing.setCurrency(resolveCurrency(request.currency()));
         listing.setCategory(request.category());
         listing.setCondition(request.condition());
         listing.setLocation(TextSanitizer.sanitize(request.location()));
@@ -232,6 +233,22 @@ public class ListingService {
         return AliasGenerator.publicId() + AliasGenerator.publicId().substring(0, 2);
     }
 
+    private String resolveCurrency(String raw) {
+        String fallback = properties.getListing().getDefaultCurrency() == null
+                ? "USD"
+                : properties.getListing().getDefaultCurrency().trim().toUpperCase();
+        String code = (raw == null || raw.isBlank()) ? fallback : raw.trim().toUpperCase();
+        if (!code.matches("[A-Z]{3}") || !properties.getListing().allowedCurrencies().contains(code)) {
+            throw ApiException.badRequest("Choose a supported currency.");
+        }
+        return code;
+    }
+
+    public CurrencyOptions currencyOptions() {
+        return new CurrencyOptions(properties.getListing().allowedCurrencies(),
+                resolveCurrency(properties.getListing().getDefaultCurrency()));
+    }
+
     ListingResponse toResponse(Listing listing, UserPrincipal principal, boolean owner) {
         SellerPublic seller = new SellerPublic(listing.getSeller().getAlias(), listing.getSeller().getAvatarColor(),
                 listing.getSeller().getRatingAvg(), listing.getSeller().getRatingCount());
@@ -241,6 +258,7 @@ public class ListingService {
                 listing.getTitle(),
                 listing.getDescription(),
                 listing.getPrice(),
+                listing.getCurrency() == null ? "USD" : listing.getCurrency(),
                 listing.getCategory().name(),
                 listing.getCondition().name(),
                 listing.getLocation(),
@@ -261,6 +279,7 @@ public class ListingService {
                 listing.getPublicId(),
                 listing.getTitle(),
                 listing.getPrice(),
+                listing.getCurrency() == null ? "USD" : listing.getCurrency(),
                 listing.getCategory().name(),
                 listing.getCondition().name(),
                 listing.getStatus().name(),
@@ -278,18 +297,20 @@ public class ListingService {
             @NotBlank @Size(max = 120) String title,
             @NotBlank @Size(max = 4000) String description,
             @NotNull @Positive BigDecimal price,
+            String currency,
             @NotNull ListingCategory category,
             @NotNull ItemCondition condition,
             @Size(max = 120) String location
     ) {}
 
     public record SellerPublic(String alias, String avatarColor, java.math.BigDecimal ratingAvg, int ratingCount) {}
-    public record ListingResponse(String publicId, String title, String description, BigDecimal price, String category,
+    public record ListingResponse(String publicId, String title, String description, BigDecimal price, String currency, String category,
                                   String condition, String location, String status, Instant createdAt, Instant updatedAt,
                                   Instant soldAt, SellerPublic seller, List<String> images, boolean owner, String communityName) {}
-    public record ListingCard(String publicId, String title, BigDecimal price, String category, String condition, String status,
+    public record ListingCard(String publicId, String title, BigDecimal price, String currency, String category, String condition, String status,
                               Instant createdAt, Instant updatedAt, String coverImage, String sellerAlias, String sellerColor,
                               java.math.BigDecimal sellerRating, boolean owner) {}
+    public record CurrencyOptions(List<String> currencies, String defaultCurrency) {}
 
     public interface ChatBridge {
         void onSold(Listing listing);

@@ -40,6 +40,12 @@ public class ListingController {
         return listingService.mine(AuthSupport.requireUser());
     }
 
+    @GetMapping("/currencies")
+    public ListingService.CurrencyOptions currencies() {
+        AuthSupport.requireUser();
+        return listingService.currencyOptions();
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ListingService.ListingResponse create(
             @RequestPart("listing") @Valid ListingService.ListingUpsertRequest listing,

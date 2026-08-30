@@ -52,6 +52,10 @@ class ApiFlowTest {
                 .andExpect(jsonPath("$.alias").isNotEmpty());
 
         String publicId = createListing(alice);
+        mvc.perform(get("/api/listings/currencies").cookie(alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currencies", hasItems("USD", "INR")))
+                .andExpect(jsonPath("$.defaultCurrency").value("USD"));
         mvc.perform(get("/api/listings").cookie(bob))
                 .andExpect(jsonPath("$.content", hasSize(0)));
 
@@ -74,6 +78,7 @@ class ApiFlowTest {
 
         mvc.perform(get("/api/listings").cookie(bob))
                 .andExpect(jsonPath("$.content[0].publicId").value(publicId))
+                .andExpect(jsonPath("$.content[0].currency").value("INR"))
                 .andExpect(jsonPath("$.content[0].sellerAlias").isNotEmpty())
                 .andExpect(jsonPath("$..email").doesNotExist());
 
@@ -145,13 +150,14 @@ class ApiFlowTest {
 
     private String createListing(MockCookie cookie) throws Exception {
         ListingService.ListingUpsertRequest payload = new ListingService.ListingUpsertRequest(
-                "Desk lamp", "Barely used brass lamp", new BigDecimal("40.00"),
+                "Desk lamp", "Barely used brass lamp", new BigDecimal("40.00"), "INR",
                 ListingCategory.HOME, ItemCondition.LIKE_NEW, "Building A");
         MockMultipartFile json = new MockMultipartFile("listing", "listing.json", "application/json", mapper.writeValueAsBytes(payload));
         MockMultipartFile image = new MockMultipartFile("images", "lamp.png", "image/png", png());
         String body = mvc.perform(multipart("/api/listings").file(json).file(image).with(csrf()).cookie(cookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.publicId").isNotEmpty())
+                .andExpect(jsonPath("$.currency").value("INR"))
                 .andReturn().getResponse().getContentAsString();
         return mapper.readTree(body).get("publicId").asText();
     }

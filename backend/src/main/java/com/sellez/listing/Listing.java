@@ -41,6 +41,9 @@ public class Listing {
     @Column(nullable = false)
     private BigDecimal price;
 
+    @Column(nullable = false, length = 3)
+    private String currency = "USD";
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ListingCategory category;

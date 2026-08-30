@@ -116,8 +116,17 @@ public class SellezProperties {
 
     public static class Listing {
         private int maxImages = 6;
+        private String currencies = "USD,INR,EUR,GBP,AED,CAD,AUD";
+        private String defaultCurrency = "USD";
         public int getMaxImages() { return maxImages; }
         public void setMaxImages(int maxImages) { this.maxImages = maxImages; }
+        public List<String> allowedCurrencies() {
+            return Arrays.stream(currencies.split(",")).map(String::trim).map(String::toUpperCase).filter(s -> !s.isBlank()).toList();
+        }
+        public String getCurrencies() { return currencies; }
+        public void setCurrencies(String currencies) { this.currencies = currencies; }
+        public String getDefaultCurrency() { return defaultCurrency; }
+        public void setDefaultCurrency(String defaultCurrency) { this.defaultCurrency = defaultCurrency; }
     }
 
     public static class Chat {
