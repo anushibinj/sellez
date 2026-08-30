@@ -5,3 +5,5 @@
 - [x] The search section in the listings page should be minimal. Make it a one-liner.
 - [ ] When showing ad listings in the responsive mobile view, the search options should be collapsed/minimized so that not many options are cluttering the GUI.
 - [ ] The app should auto-infer the locale and present dates, currencies and number formats accordingly.
+- [ ] The application feels very laggy when scrolling. Fix it by either adding smooth scrolling or removing heavy weight components.
+- [ ] Add list view to the ad listings page (in addition to the current grid view). Then, make it the default view mode.
