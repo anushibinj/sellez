@@ -1,1 +1,5 @@
 - [ ] Sign-in OTP is always 123456. Need to fix it.
+- [ ] Add a README.md file for the project.
+- [ ] Provide an option to choose currency ($ or rupees, etc) when creating an ad listing.
+- [ ] When viewing an ad listing, the "Report" button should be a secondary action button next to the "Message seller" button. Remove the whole report section below. Instead, move it to a separate modal.
+- [ ] The search section in the listings page should be minimal. Make it a one-liner.
