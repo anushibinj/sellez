@@ -9,6 +9,7 @@ import { ListingDetail, REPORT_REASONS } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, Skeleton, Textarea } from "@/components/ui/field";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { PrivacyNote } from "@/components/privacy-note";
 
 export default function ListingDetailPage() {
@@ -20,14 +21,25 @@ export default function ListingDetailPage() {
     queryKey: ["rating", publicId],
     queryFn: () => api<{ stars: number } | null>(`/ratings?listingPublicId=${publicId}`),
   });
+  const [reportOpen, setReportOpen] = useState(false);
   const [reason, setReason] = useState("SPAM");
+  const [details, setDetails] = useState("");
   const [stars, setStars] = useState(5);
 
   if (listing.isLoading) return <Skeleton className="h-96" />;
   if (listing.isError || !listing.data) return <Card>This listing is unavailable in your community.</Card>;
   const item = listing.data;
 
+  async function submitReport() {
+    await api("/reports", { method: "POST", body: JSON.stringify({ reason, details, listingPublicId: item.publicId }) });
+    toast.success("Report sent to community moderators.");
+    setDetails("");
+    setReason("SPAM");
+    setReportOpen(false);
+  }
+
   return (
+    <>
     <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -40,7 +52,7 @@ export default function ListingDetailPage() {
       <div className="space-y-4">
         <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">{item.communityName} · share /listing/{item.publicId}</p>
         <h1 className="text-4xl">{item.title}</h1>
-        <p className="text-2xl">{formatPrice(item.price)}</p>
+        <p className="text-2xl">{formatPrice(item.price, item.currency)}</p>
         <p className="whitespace-pre-wrap text-[var(--muted)]">{item.description}</p>
         <p>{item.category} · {item.condition}{item.location ? ` · ${item.location}` : ""}</p>
         <p>Seller alias {item.seller.alias} · ★ {Number(item.seller.ratingAvg).toFixed(1)} ({item.seller.ratingCount})</p>
@@ -51,6 +63,9 @@ export default function ListingDetailPage() {
               const chat = await api<{ id: string }>("/chats/start", { method: "POST", body: JSON.stringify({ listingPublicId: item.publicId }) });
               router.push(`/chats/${chat.id}`);
             }}>Message seller</Button>
+          )}
+          {!item.owner && (
+            <Button variant="outline" onClick={() => setReportOpen(true)}>Report</Button>
           )}
           {item.owner && item.status === "ACTIVE" && (
             <Button onClick={async () => {
@@ -72,19 +87,22 @@ export default function ListingDetailPage() {
             }}>Submit rating</Button>
           </Card>
         )}
-        <Card>
-          <h2 className="text-xl">Report</h2>
+      </div>
+    </div>
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent>
+          <DialogTitle>Report listing</DialogTitle>
+          <DialogDescription>Reports go to community moderators. Aliases stay private.</DialogDescription>
           <select className="mt-3 h-11 w-full rounded-2xl border border-[var(--border)] bg-transparent px-3" value={reason} onChange={(e) => setReason(e.target.value)}>
             {REPORT_REASONS.map((r) => <option key={r}>{r}</option>)}
           </select>
-          <Textarea className="mt-3" placeholder="Optional details" id="report-details" />
-          <Button className="mt-3" variant="outline" onClick={async () => {
-            const details = (document.getElementById("report-details") as HTMLTextAreaElement).value;
-            await api("/reports", { method: "POST", body: JSON.stringify({ reason, details, listingPublicId: item.publicId }) });
-            toast.success("Report sent to community moderators.");
-          }}>Report listing</Button>
-        </Card>
-      </div>
-    </div>
+          <Textarea className="mt-3" placeholder="Optional details" value={details} onChange={(e) => setDetails(e.target.value)} />
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" onClick={() => setReportOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={submitReport}>Report listing</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
