@@ -23,7 +23,7 @@ export default function MyListingsPage() {
         <Card key={item.publicId} className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <Link className="text-xl underline-offset-4 hover:underline" href={`/listing/${item.publicId}`}>{item.title}</Link>
-            <p className="text-sm text-[var(--muted)]">{item.status} · {formatPrice(item.price)}</p>
+            <p className="text-sm text-[var(--muted)]">{item.status} · {formatPrice(item.price, item.currency)}</p>
           </div>
           <div className="flex gap-2">
             {item.status === "UNDER_REVIEW" && (

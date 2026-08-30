@@ -45,15 +45,45 @@ export default function MarketplacePage() {
         </div>
         <Button asChild><Link href="/listings/new">Create listing</Link></Button>
       </div>
-      <Card className="grid gap-3 md:grid-cols-5">
-        <Input placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search listings" />
-        <select className="h-11 rounded-2xl border border-[var(--border)] bg-transparent px-3" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category">
+      <Card className="flex flex-wrap items-center gap-2 p-2 sm:p-3 md:flex-nowrap">
+        <Input
+          className="min-w-0 flex-1"
+          placeholder="Search listings"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          aria-label="Search listings"
+        />
+        <select
+          className="h-11 w-full shrink-0 rounded-2xl border border-[var(--border)] bg-transparent px-3 text-sm sm:w-auto md:w-40"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          aria-label="Category"
+        >
           <option value="">All categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <Input placeholder="Min price" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} inputMode="decimal" />
-        <Input placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputMode="decimal" />
-        <select className="h-11 rounded-2xl border border-[var(--border)] bg-transparent px-3" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
+        <Input
+          className="w-full min-w-0 sm:w-24"
+          placeholder="Min"
+          value={minPrice}
+          onChange={(e) => setMinPrice(e.target.value)}
+          inputMode="decimal"
+          aria-label="Minimum price"
+        />
+        <Input
+          className="w-full min-w-0 sm:w-24"
+          placeholder="Max"
+          value={maxPrice}
+          onChange={(e) => setMaxPrice(e.target.value)}
+          inputMode="decimal"
+          aria-label="Maximum price"
+        />
+        <select
+          className="h-11 w-full shrink-0 rounded-2xl border border-[var(--border)] bg-transparent px-3 text-sm sm:w-auto md:w-44"
+          value={sort}
+          onChange={(e) => setSort(e.target.value)}
+          aria-label="Sort"
+        >
           <option value="newest">Newest</option>
           <option value="updated">Recently updated</option>
           <option value="rating">Seller rating</option>
@@ -77,7 +107,7 @@ export default function MarketplacePage() {
                 <div className="space-y-1 p-5">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-xl group-hover:underline">{item.title}</h2>
-                    <span>{formatPrice(item.price)}</span>
+                    <span>{formatPrice(item.price, item.currency)}</span>
                   </div>
                   <p className="text-sm text-[var(--muted)]">{item.category} · {item.condition}</p>
                   <p className="text-sm" style={{ color: item.sellerColor }}>{item.sellerAlias} · ★ {Number(item.sellerRating).toFixed(1)}</p>

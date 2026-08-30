@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CATEGORIES, CONDITIONS, ListingDetail } from "@/lib/types";
+import { CATEGORIES, CONDITIONS, ListingDetail, currencyLabel, defaultListingCurrency, listingCurrencies } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Label, Textarea } from "@/components/ui/field";
 import { PrivacyNote } from "@/components/privacy-note";
@@ -15,6 +15,7 @@ const schema = z.object({
   title: z.string().min(3).max(120),
   description: z.string().min(8).max(4000),
   price: z.string().min(1),
+  currency: z.string().length(3),
   category: z.string(),
   condition: z.string(),
   location: z.string().optional(),
@@ -35,11 +36,12 @@ export default function ListingFormPage() {
       title: existing.data.title,
       description: existing.data.description,
       price: String(existing.data.price),
+      currency: existing.data.currency ?? defaultListingCurrency(),
       category: existing.data.category,
       condition: existing.data.condition,
       location: existing.data.location ?? "",
     } : undefined,
-    defaultValues: { title: "", description: "", price: "", category: "HOME", condition: "GOOD", location: "" },
+    defaultValues: { title: "", description: "", price: "", currency: defaultListingCurrency(), category: "HOME", condition: "GOOD", location: "" },
   });
 
   async function save(asSubmit: boolean) {
@@ -48,6 +50,7 @@ export default function ListingFormPage() {
       title: values.title,
       description: values.description,
       price: Number(values.price),
+      currency: values.currency,
       category: values.category,
       condition: values.condition,
       location: values.location,
@@ -70,8 +73,14 @@ export default function ListingFormPage() {
         <form className="mt-6 space-y-4" onSubmit={form.handleSubmit(() => save(false))}>
           <div><Label>Title</Label><Input {...form.register("title")} />{form.formState.errors.title && <p className="text-sm text-[var(--warn)]">Title needs a few more characters.</p>}</div>
           <div><Label>Description</Label><Textarea {...form.register("description")} />{form.formState.errors.description && <p className="text-sm text-[var(--warn)]">Add a short description.</p>}</div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div><Label>Price</Label><Input inputMode="decimal" {...form.register("price")} /></div>
+            <div>
+              <Label>Currency</Label>
+              <select className="h-11 w-full rounded-2xl border border-[var(--border)] bg-transparent px-3" {...form.register("currency")}>
+                {listingCurrencies().map((code) => <option key={code} value={code}>{currencyLabel(code)}</option>)}
+              </select>
+            </div>
             <div><Label>Location</Label><Input {...form.register("location")} /></div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
