@@ -1,0 +1,97 @@
+"use client";
+
+import Link from "next/link";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { api } from "@/lib/api";
+import { CATEGORIES, ListingCard } from "@/lib/types";
+import { formatPrice } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, Input, Skeleton } from "@/components/ui/field";
+
+type Page = { content: ListingCard[]; last: boolean; number: number };
+
+export default function MarketplacePage() {
+  const [q, setQ] = useState("");
+  const [category, setCategory] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sort, setSort] = useState("newest");
+  const params = useMemo(() => ({ q, category, minPrice, maxPrice, sort }), [q, category, minPrice, maxPrice, sort]);
+
+  const listings = useInfiniteQuery({
+    queryKey: ["listings", params],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => {
+      const search = new URLSearchParams({ page: String(pageParam), size: "12", sort });
+      if (q) search.set("q", q);
+      if (category) search.set("category", category);
+      if (minPrice) search.set("minPrice", minPrice);
+      if (maxPrice) search.set("maxPrice", maxPrice);
+      return api<Page>(`/listings?${search}`);
+    },
+    getNextPageParam: (last) => (last.last ? undefined : last.number + 1),
+  });
+
+  const items = listings.data?.pages.flatMap((p) => p.content) ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-[var(--accent)]">Your community only</p>
+          <h1 className="text-4xl">Marketplace</h1>
+          <p className="text-[var(--muted)]">Only verified members of your community can see listings.</p>
+        </div>
+        <Button asChild><Link href="/listings/new">Create listing</Link></Button>
+      </div>
+      <Card className="grid gap-3 md:grid-cols-5">
+        <Input placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search listings" />
+        <select className="h-11 rounded-2xl border border-[var(--border)] bg-transparent px-3" value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category">
+          <option value="">All categories</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <Input placeholder="Min price" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} inputMode="decimal" />
+        <Input placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputMode="decimal" />
+        <select className="h-11 rounded-2xl border border-[var(--border)] bg-transparent px-3" value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
+          <option value="newest">Newest</option>
+          <option value="updated">Recently updated</option>
+          <option value="rating">Seller rating</option>
+        </select>
+      </Card>
+      {listings.isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-64" />)}</div>
+      ) : items.length === 0 ? (
+        <Card className="py-16 text-center text-[var(--muted)]">No listings yet. Be the first in your community.</Card>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => (
+            <Link key={item.publicId} href={`/listing/${item.publicId}`} className="group">
+              <Card className="overflow-hidden p-0">
+                <div className="aspect-[4/3] bg-black/5">
+                  {item.coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.coverImage} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : null}
+                </div>
+                <div className="space-y-1 p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="text-xl group-hover:underline">{item.title}</h2>
+                    <span>{formatPrice(item.price)}</span>
+                  </div>
+                  <p className="text-sm text-[var(--muted)]">{item.category} · {item.condition}</p>
+                  <p className="text-sm" style={{ color: item.sellerColor }}>{item.sellerAlias} · ★ {Number(item.sellerRating).toFixed(1)}</p>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
+      {listings.hasNextPage && (
+        <div className="text-center">
+          <Button variant="outline" onClick={() => listings.fetchNextPage()}>Load more</Button>
+        </div>
+      )}
+    </div>
+  );
+}

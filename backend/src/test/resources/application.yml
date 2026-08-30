@@ -1,0 +1,20 @@
+sellez:
+  auth:
+    otp-fixed-code: "123456"
+  email:
+    provider: logging
+  security:
+    cookie-secure: false
+    jwt-secret: test-secret-test-secret-test-secret-32
+  storage:
+    local-path: ${java.io.tmpdir}/sellez-test-uploads
+    public-base-url: http://localhost/api/media
+  super-admin:
+    emails: owner@sellez.local
+  jobs:
+    ban-expiry-ms: 3600000
+
+spring:
+  task:
+    scheduling:
+      enabled: false
