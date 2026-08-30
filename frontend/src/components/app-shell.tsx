@@ -2,17 +2,34 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getMe, logout } from "@/lib/api";
 import { Button } from "./ui/button";
+
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      aria-label="Toggle theme"
+    >
+      {mounted && resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </Button>
+  );
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { resolvedTheme, setTheme } = useTheme();
+  const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
   const isPublic = pathname === "/" || pathname.startsWith("/login");
 
@@ -21,6 +38,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (me.isError && !isPublic) router.replace("/login");
     if (me.data && !me.data.onboarded && pathname !== "/onboarding") router.replace("/onboarding");
   }, [me.isLoading, me.isError, me.data, isPublic, pathname, router]);
+
+  async function handleLogout() {
+    await logout();
+    queryClient.clear();
+    router.push("/");
+  }
 
   return (
     <div className="min-h-screen">
@@ -44,18 +67,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: me.data.avatarColor }} />
                 {me.data.alias}
               </span>
-              <Button variant="ghost" size="sm" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
-                {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
-              <Button variant="outline" size="sm" onClick={async () => { await logout(); router.push("/"); }}>
+              <ThemeToggle />
+              <Button variant="outline" size="sm" onClick={handleLogout}>
                 Log out
               </Button>
             </nav>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} aria-label="Toggle theme">
-                {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
+              <ThemeToggle />
               <Button asChild size="sm"><Link href="/login">Sign in</Link></Button>
             </div>
           )}
