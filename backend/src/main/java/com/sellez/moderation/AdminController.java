@@ -43,6 +43,11 @@ public class AdminController {
         return adminService.returnListing(AuthSupport.requireUser(), publicId, body.reason());
     }
 
+    @PatchMapping("/listings/{publicId}/category")
+    public AdminService.ListingServiceView updateCategory(@PathVariable String publicId, @Valid @RequestBody AdminService.CategoryRequest body) {
+        return adminService.updateCategory(AuthSupport.requireUser(), publicId, body.category());
+    }
+
     @PostMapping("/users/{id}/ban")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void ban(@PathVariable UUID id, @Valid @RequestBody AdminService.BanRequest body) {

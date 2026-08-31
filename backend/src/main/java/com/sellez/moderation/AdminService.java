@@ -7,18 +7,21 @@ import com.sellez.community.Community;
 import com.sellez.community.CommunityRepository;
 import com.sellez.email.NotificationService;
 import com.sellez.listing.Listing;
+import com.sellez.listing.ListingCategory;
 import com.sellez.listing.ListingRepository;
 import com.sellez.listing.ListingStatus;
 import com.sellez.report.Report;
 import com.sellez.report.ReportRepository;
 import com.sellez.report.ReportStatus;
 import com.sellez.security.UserPrincipal;
+import com.sellez.storage.StorageService;
 import com.sellez.user.UserAccount;
 import com.sellez.user.UserAccountRepository;
 import com.sellez.user.UserRole;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,10 +43,11 @@ public class AdminService {
     private final NotificationService notifications;
     private final AuditService auditService;
     private final CommunityRepository communities;
+    private final StorageService storage;
 
     public AdminService(BanService banService, ListingRepository listings, UserAccountRepository users, BanRepository bans,
                         ReportRepository reports, NotificationService notifications, AuditService auditService,
-                        CommunityRepository communities) {
+                        CommunityRepository communities, StorageService storage) {
         this.banService = banService;
         this.listings = listings;
         this.users = users;
@@ -52,6 +56,7 @@ public class AdminService {
         this.notifications = notifications;
         this.auditService = auditService;
         this.communities = communities;
+        this.storage = storage;
     }
 
     public Dashboard dashboard(UserPrincipal principal) {
@@ -120,6 +125,16 @@ public class AdminService {
     }
 
     @Transactional
+    public ListingServiceView updateCategory(UserPrincipal principal, String publicId, ListingCategory category) {
+        Listing listing = moderate(principal, publicId);
+        listing.setCategory(category);
+        listing.setUpdatedAt(Instant.now());
+        listings.save(listing);
+        auditService.log(principal.getId(), principal.getCommunityId(), "LISTING_CATEGORY_UPDATED", "listing", listing.getId().toString(), Map.of("category", category.name()));
+        return toView(listing);
+    }
+
+    @Transactional
     public void ban(UserPrincipal principal, UUID userId, BanRequest request) {
         banService.requireCommunityAdmin(principal);
         UserAccount target = users.findWithCommunityById(userId).orElseThrow(() -> ApiException.notFound("User not found."));
@@ -179,14 +194,20 @@ public class AdminService {
     }
 
     private ListingServiceView toView(Listing listing) {
-        return new ListingServiceView(listing.getPublicId(), listing.getTitle(), listing.getStatus().name(),
+        List<String> images = listing.getImages().stream().map(img -> storage.publicUrl(img.getStorageKey())).toList();
+        return new ListingServiceView(listing.getPublicId(), listing.getTitle(), listing.getDescription(),
+                listing.getPrice(), listing.getCurrency() == null ? "USD" : listing.getCurrency(),
+                listing.getCategory().name(), images, listing.getStatus().name(),
                 listing.getSeller().getAlias(), listing.getCreatedAt(), listing.getUpdatedAt());
     }
 
     public record Dashboard(long activeListings, long pendingReview, long soldToday, long openReports, long bannedUsers) {}
-    public record ListingServiceView(String publicId, String title, String status, String sellerAlias, Instant createdAt, Instant updatedAt) {}
+    public record ListingServiceView(String publicId, String title, String description, java.math.BigDecimal price,
+                                     String currency, String category, List<String> images, String status,
+                                     String sellerAlias, Instant createdAt, Instant updatedAt) {}
     public record BanRequest(String type, @Min(1) @Max(10) int days, @NotBlank String reason) {}
     public record MemberView(UUID id, String alias, String avatarColor, String role, java.math.BigDecimal ratingAvg, int ratingCount) {}
     public record ReportView(UUID id, String reason, String details, String status, String listingPublicId, UUID chatId, Instant createdAt) {}
     public record ReasonRequest(@NotBlank String reason) {}
+    public record CategoryRequest(@NotNull ListingCategory category) {}
 }
