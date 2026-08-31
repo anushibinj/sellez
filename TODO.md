@@ -6,5 +6,5 @@
 - [ ] When showing ad listings in the responsive mobile view, the search options should be collapsed/minimized so that not many options are cluttering the GUI.
 - [ ] The app should auto-infer the locale and present dates, currencies and number formats accordingly.
 - [ ] The application feels very laggy when scrolling. Fix it by either adding smooth scrolling or removing heavy weight components.
-- [ ] Add list view to the ad listings page (in addition to the current grid view). Then, make it the default view mode.
+- [x] Add list view to the ad listings page (in addition to the current grid view). Then, make it the default view mode.
 - [x] As a community admin, in the approval page for community admins, I should be able to see the description, image, price and category of the listing as well. I should be able to update the category just in case the ad poster gave an incorrect one.
