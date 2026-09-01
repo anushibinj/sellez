@@ -1,13 +1,18 @@
 import Link from "next/link";
+import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/field";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function NotFound() {
   return (
-    <Card className="mx-auto max-w-lg py-16 text-center">
-      <h1 className="text-3xl">Page not found</h1>
-      <p className="mt-2 text-[var(--muted)]">That link does not exist in SellEZ.</p>
-      <Button asChild className="mt-6"><Link href="/marketplace">Back to marketplace</Link></Button>
-    </Card>
+    <div className="mx-auto flex min-h-[60vh] max-w-lg items-center">
+      <EmptyState
+        icon={Compass}
+        title="Page not found"
+        description="That link does not exist in SellEZ."
+        action={<Button asChild><Link href="/marketplace">Back to marketplace</Link></Button>}
+        className="w-full border-none py-0"
+      />
+    </div>
   );
 }

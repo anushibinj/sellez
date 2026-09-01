@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Store, MessageCircle, Package, PlusCircle, Shield, ShieldCheck, Sun, User, LogOut, AlertTriangle } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { getMe, logout } from "@/lib/api";
 import { Button } from "./ui/button";
+import { Avatar } from "./ui/avatar";
+import { Dialog, SheetContent, DialogTitle } from "./ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -17,14 +21,20 @@ function ThemeToggle() {
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label="Toggle theme"
     >
-      {mounted && resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {mounted && resolvedTheme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>
   );
 }
+
+const NAV_LINKS = [
+  { href: "/marketplace", label: "Browse", icon: Store },
+  { href: "/listings/mine", label: "My listings", icon: Package },
+  { href: "/chats", label: "Chats", icon: MessageCircle },
+];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,6 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
   const isPublic = pathname === "/" || pathname.startsWith("/login");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (me.isLoading) return;
@@ -45,33 +56,90 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push("/");
   }
 
+  const authed = Boolean(me.data && me.data.onboarded && !me.isError);
+  const isAdmin = me.data?.role === "COMMUNITY_ADMIN" || me.data?.role === "SUPER_ADMIN";
+  const isSuperAdmin = me.data?.role === "SUPER_ADMIN";
+
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_82%,transparent)] backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link href={me.data ? "/marketplace" : "/"} className="serif text-xl tracking-tight">
+      <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
+          <Link href={me.data ? "/marketplace" : "/"} className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+            <span className="flex size-6 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--accent)] text-xs font-bold text-[var(--accent-foreground)]">S</span>
             SellEZ
           </Link>
-          {me.data ? (
-            <nav className="flex flex-wrap items-center gap-1 text-sm">
-              <Link className="rounded-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5" href="/marketplace">Browse</Link>
-              <Link className="rounded-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5" href="/listings/mine">My listings</Link>
-              <Link className="rounded-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5" href="/chats">Chats</Link>
-              {(me.data.role === "COMMUNITY_ADMIN" || me.data.role === "SUPER_ADMIN") && (
-                <Link className="rounded-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5" href="/admin">Admin</Link>
-              )}
-              {me.data.role === "SUPER_ADMIN" && (
-                <Link className="rounded-full px-3 py-2 hover:bg-black/5 dark:hover:bg-white/5" href="/super">Super</Link>
-              )}
-              <span className="hidden items-center gap-2 rounded-full border border-[var(--border)] px-3 py-1 sm:flex">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: me.data.avatarColor }} />
-                {me.data.alias}
-              </span>
-              <ThemeToggle />
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Log out
-              </Button>
-            </nav>
+
+          {authed ? (
+            <>
+              <nav className="hidden items-center gap-1 text-sm md:flex">
+                {NAV_LINKS.map((link) => {
+                  const active = pathname === link.href || pathname.startsWith(link.href + "/");
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "rounded-[var(--radius-sm)] px-3 py-1.5 font-medium transition-colors",
+                        active ? "bg-[var(--accent-tint)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className={cn(
+                      "rounded-[var(--radius-sm)] px-3 py-1.5 font-medium transition-colors",
+                      pathname.startsWith("/admin") ? "bg-[var(--accent-tint)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"
+                    )}
+                  >
+                    Admin
+                  </Link>
+                )}
+                {isSuperAdmin && (
+                  <Link
+                    href="/super"
+                    className={cn(
+                      "rounded-[var(--radius-sm)] px-3 py-1.5 font-medium transition-colors",
+                      pathname.startsWith("/super") ? "bg-[var(--accent-tint)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]"
+                    )}
+                  >
+                    Super
+                  </Link>
+                )}
+              </nav>
+
+              <div className="flex items-center gap-1.5">
+                <Button asChild size="sm" className="hidden md:inline-flex">
+                  <Link href="/listings/new">
+                    <PlusCircle className="size-4" /> Sell
+                  </Link>
+                </Button>
+                <ThemeToggle />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
+                      <Avatar color={me.data!.avatarColor} alias={me.data!.alias} />
+                      <span className="hidden text-sm font-medium sm:inline">{me.data!.alias}</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuLabel>{me.data!.community.displayName}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {me.data?.ban && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/banned/appeal"><AlertTriangle className="size-4" /> Appeal restriction</Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={handleLogout} destructive>
+                      <LogOut className="size-4" /> Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </>
           ) : (
             <div className="flex items-center gap-2">
               <ThemeToggle />
@@ -80,13 +148,91 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </header>
+
       {me.data?.ban && (
-        <div className="border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--warn)_12%,transparent)] px-4 py-3 text-center text-sm">
+        <div className="border-b border-[var(--border)] bg-[var(--warning-tint)] px-4 py-2.5 text-center text-sm text-[var(--warning)]">
           You are temporarily restricted until {me.data.ban.untilLabel}.{" "}
-          <Link className="underline" href="/banned/appeal">Appeal ban</Link>
+          <Link className="font-medium underline underline-offset-2" href="/banned/appeal">Appeal ban</Link>
         </div>
       )}
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+
+      <main className={cn("mx-auto max-w-6xl px-4 py-6 sm:py-8", authed && "pb-24 md:pb-8")}>{children}</main>
+
+      {authed && (
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_92%,transparent)] backdrop-blur-xl pb-[env(safe-area-inset-bottom)] md:hidden">
+          <div className="mx-auto flex max-w-6xl items-stretch justify-around">
+            {[
+              { href: "/marketplace", label: "Browse", icon: Store },
+              { href: "/listings/new", label: "Sell", icon: PlusCircle },
+              { href: "/chats", label: "Chats", icon: MessageCircle },
+            ].map((item) => {
+              const active = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+                    active ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
+                  )}
+                >
+                  <Icon className="size-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+            <button
+              onClick={() => setMenuOpen(true)}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+                menuOpen || pathname.startsWith("/admin") || pathname.startsWith("/super") ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
+              )}
+            >
+              <User className="size-5" />
+              Account
+            </button>
+          </div>
+        </nav>
+      )}
+
+      {authed && (
+        <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetContent side="bottom">
+            <DialogTitle className="sr-only">Account menu</DialogTitle>
+            <div className="flex items-center gap-3 pb-4">
+              <Avatar color={me.data!.avatarColor} alias={me.data!.alias} className="size-10 text-sm" />
+              <div>
+                <p className="text-sm font-semibold">{me.data!.alias}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">{me.data!.community.displayName}</p>
+              </div>
+            </div>
+            <div className="space-y-1 border-t border-[var(--border)] pt-3">
+              <Link href="/listings/mine" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-sm font-medium hover:bg-[var(--surface-2)]">
+                <Package className="size-4" /> My listings
+              </Link>
+              {isAdmin && (
+                <Link href="/admin" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-sm font-medium hover:bg-[var(--surface-2)]">
+                  <ShieldCheck className="size-4" /> Admin
+                </Link>
+              )}
+              {isSuperAdmin && (
+                <Link href="/super" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-sm font-medium hover:bg-[var(--surface-2)]">
+                  <Shield className="size-4" /> Super admin
+                </Link>
+              )}
+              {me.data?.ban && (
+                <Link href="/banned/appeal" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-sm font-medium text-[var(--warning)] hover:bg-[var(--warning-tint)]">
+                  <AlertTriangle className="size-4" /> Appeal restriction
+                </Link>
+              )}
+              <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-[var(--radius-sm)] px-3 py-2.5 text-left text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-tint)]">
+                <LogOut className="size-4" /> Log out
+              </button>
+            </div>
+          </SheetContent>
+        </Dialog>
+      )}
     </div>
   );
 }
