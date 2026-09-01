@@ -8,3 +8,6 @@
 - [ ] The application feels very laggy when scrolling. Fix it by either adding smooth scrolling or removing heavy weight components.
 - [x] Add list view to the ad listings page (in addition to the current grid view). Then, make it the default view mode.
 - [x] As a community admin, in the approval page for community admins, I should be able to see the description, image, price and category of the listing as well. I should be able to update the category just in case the ad poster gave an incorrect one.
+- [ ] Make the category picker multi-selectable
+- [ ] Add Price (Ascending) and Price (Descending) to the sorting options in the products listing page
+- [ ] As a community admin or super admin, I should be able to "take down" any product listing at any time if I feel it is inappropriate. I should write a mandatory note as to why the product was taken down. And the listing owner should receive an e-mail with the reason and listing detail.
