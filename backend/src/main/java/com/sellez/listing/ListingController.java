@@ -25,14 +25,14 @@ public class ListingController {
     @GetMapping
     public Page<ListingService.ListingCard> browse(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) ListingCategory category,
+            @RequestParam(required = false) List<ListingCategory> categories,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false, defaultValue = "newest") String sort,
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "20") int size
     ) {
-        return listingService.browse(AuthSupport.requireUser(), q, category, minPrice, maxPrice, sort, page, size);
+        return listingService.browse(AuthSupport.requireUser(), q, categories, minPrice, maxPrice, sort, page, size);
     }
 
     @GetMapping("/mine")

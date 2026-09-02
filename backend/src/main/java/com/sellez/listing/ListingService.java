@@ -145,7 +145,7 @@ public class ListingService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ListingCard> browse(UserPrincipal principal, String q, ListingCategory category, BigDecimal minPrice,
+    public Page<ListingCard> browse(UserPrincipal principal, String q, List<ListingCategory> categories, BigDecimal minPrice,
                                     BigDecimal maxPrice, String sort, int page, int size) {
         Specification<Listing> spec = (root, query, cb) -> {
             if (query.getResultType() != Long.class && query.getResultType() != long.class) {
@@ -158,8 +158,8 @@ public class ListingService {
                 String like = "%" + q.toLowerCase() + "%";
                 predicates.add(cb.or(cb.like(cb.lower(root.get("title")), like), cb.like(cb.lower(root.get("description")), like)));
             }
-            if (category != null) {
-                predicates.add(cb.equal(root.get("category"), category));
+            if (categories != null && !categories.isEmpty()) {
+                predicates.add(root.get("category").in(categories));
             }
             if (minPrice != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));

@@ -1,6 +1,7 @@
 "use client";
 
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -33,6 +34,34 @@ export function DropdownMenuItem({ className, destructive, ...props }: React.Com
       )}
       {...props}
     />
+  );
+}
+
+export function DropdownMenuCheckboxItem({
+  className,
+  children,
+  onSelect,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem>) {
+  return (
+    <DropdownMenuPrimitive.CheckboxItem
+      className={cn(
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-[var(--radius-sm)] py-2 pl-8 pr-2.5 text-sm text-[var(--foreground)] outline-none transition-colors focus:bg-[var(--surface-2)]",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className
+      )}
+      onSelect={(e) => {
+        // Keep the menu open so multiple options can be toggled in one visit.
+        e.preventDefault();
+        onSelect?.(e);
+      }}
+      {...props}
+    >
+      <DropdownMenuPrimitive.ItemIndicator className="absolute left-2.5 flex size-4 items-center justify-center text-[var(--accent)]">
+        <Check className="size-3.5" />
+      </DropdownMenuPrimitive.ItemIndicator>
+      {children}
+    </DropdownMenuPrimitive.CheckboxItem>
   );
 }
 

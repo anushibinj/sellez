@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { LayoutGrid, List, PlusCircle, Search, SlidersHorizontal, ShoppingBag } from "lucide-react";
+import { ChevronDown, LayoutGrid, List, PlusCircle, Search, SlidersHorizontal, ShoppingBag } from "lucide-react";
 import { api } from "@/lib/api";
 import { CATEGORIES, ListingCard } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,9 @@ import { Input, Select, Skeleton } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog, DialogTitle, SheetContent } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ListingCardGrid, ListingCardRow } from "@/components/listing-card";
+import { cn } from "@/lib/utils";
 
 type Page = { content: ListingCard[]; last: boolean; number: number };
 type ViewMode = "list" | "grid";
@@ -26,25 +28,85 @@ function SortSelect({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function CategorySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function CategoryMultiSelect({ value, onChange, className }: { value: string[]; onChange: (v: string[]) => void; className?: string }) {
+  const label = value.length === 0 ? "All categories" : value.length === 1 ? value[0].replace(/_/g, " ") : `${value.length} categories`;
+
+  function toggle(category: string) {
+    onChange(value.includes(category) ? value.filter((c) => c !== category) : [...value, category]);
+  }
+
   return (
-    <Select aria-label="Category" value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">All categories</option>
-      {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g, " ")}</option>)}
-    </Select>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Category"
+          className={cn(
+            "flex h-10 w-full items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 text-left text-sm capitalize text-[var(--foreground)] outline-none transition-colors focus-visible:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--ring)]/30",
+            className
+          )}
+        >
+          <span className="truncate">{label}</span>
+          <ChevronDown className="size-4 shrink-0 text-[var(--muted-foreground)]" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-56">
+        {CATEGORIES.map((c) => (
+          <DropdownMenuCheckboxItem key={c} checked={value.includes(c)} onCheckedChange={() => toggle(c)} className="capitalize">
+            {c.replace(/_/g, " ").toLowerCase()}
+          </DropdownMenuCheckboxItem>
+        ))}
+        {value.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onChange([])}>Clear categories</DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function CategoryChips({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  function toggle(category: string) {
+    onChange(value.includes(category) ? value.filter((c) => c !== category) : [...value, category]);
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {CATEGORIES.map((c) => {
+        const active = value.includes(c);
+        return (
+          <button
+            key={c}
+            type="button"
+            aria-pressed={active}
+            onClick={() => toggle(c)}
+            className={cn(
+              "rounded-[var(--radius-sm)] border px-3 py-1.5 text-sm capitalize transition-colors",
+              active
+                ? "border-[var(--accent)] bg-[var(--accent-tint)] text-[var(--accent)]"
+                : "border-[var(--border-strong)] text-[var(--foreground)] hover:bg-[var(--surface-2)]"
+            )}
+          >
+            {c.replace(/_/g, " ").toLowerCase()}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
 export default function MarketplacePage() {
   const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sort, setSort] = useState("newest");
   const [view, setView] = useState<ViewMode>("list");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const params = useMemo(() => ({ q, category, minPrice, maxPrice, sort }), [q, category, minPrice, maxPrice, sort]);
-  const activeFilterCount = [category, minPrice, maxPrice].filter(Boolean).length;
+  const params = useMemo(() => ({ q, categories, minPrice, maxPrice, sort }), [q, categories, minPrice, maxPrice, sort]);
+  const activeFilterCount = [categories.length > 0, minPrice, maxPrice].filter(Boolean).length;
 
   const listings = useInfiniteQuery({
     queryKey: ["listings", params],
@@ -52,7 +114,7 @@ export default function MarketplacePage() {
     queryFn: ({ pageParam }) => {
       const search = new URLSearchParams({ page: String(pageParam), size: "12", sort });
       if (q) search.set("q", q);
-      if (category) search.set("category", category);
+      categories.forEach((c) => search.append("categories", c));
       if (minPrice) search.set("minPrice", minPrice);
       if (maxPrice) search.set("maxPrice", maxPrice);
       return api<Page>(`/listings?${search}`);
@@ -118,7 +180,7 @@ export default function MarketplacePage() {
           )}
         </Button>
         <div className="hidden shrink-0 items-center gap-2 md:flex">
-          <div className="w-40"><CategorySelect value={category} onChange={setCategory} /></div>
+          <div className="w-48"><CategoryMultiSelect value={categories} onChange={setCategories} /></div>
           <Input className="w-20" placeholder="Min" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} inputMode="decimal" aria-label="Minimum price" />
           <Input className="w-20" placeholder="Max" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputMode="decimal" aria-label="Maximum price" />
           <div className="w-44"><SortSelect value={sort} onChange={setSort} /></div>
@@ -132,7 +194,7 @@ export default function MarketplacePage() {
           <div className="mt-4 space-y-4">
             <div>
               <p className="mb-1.5 text-xs font-medium text-[var(--muted-foreground)]">Category</p>
-              <CategorySelect value={category} onChange={setCategory} />
+              <CategoryChips value={categories} onChange={setCategories} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -161,7 +223,7 @@ export default function MarketplacePage() {
         <EmptyState
           icon={ShoppingBag}
           title="No listings yet"
-          description={q || category || minPrice || maxPrice ? "Try a different search or clear your filters." : "Be the first to list something in your community."}
+          description={q || categories.length > 0 || minPrice || maxPrice ? "Try a different search or clear your filters." : "Be the first to list something in your community."}
           action={<Button asChild><Link href="/listings/new">Create the first listing</Link></Button>}
         />
       ) : (
