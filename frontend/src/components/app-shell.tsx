@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Moon, Store, MessageCircle, Package, PlusCircle, Shield, ShieldCheck, Sun, User, LogOut, AlertTriangle } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getMe, logout } from "@/lib/api";
 import { Button } from "./ui/button";
 import { Avatar } from "./ui/avatar";
@@ -42,7 +42,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
   const isPublic = pathname === "/" || pathname.startsWith("/login");
+  const authed = Boolean(me.data && me.data.onboarded && !me.isError);
   const [menuOpen, setMenuOpen] = useState(false);
+  const bottomNavRef = useRef<HTMLElement>(null);
+  // Measure the bottom nav's real rendered height instead of guessing a fixed padding value —
+  // a hardcoded guess can fall short at unusual zoom levels / text-wrap widths and let the
+  // fixed nav cover the last bit of page content. Reports 0 when the nav is `md:hidden`.
+  const [bottomNavHeight, setBottomNavHeight] = useState(0);
 
   useEffect(() => {
     if (me.isLoading) return;
@@ -50,13 +56,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (me.data && !me.data.onboarded && pathname !== "/onboarding") router.replace("/onboarding");
   }, [me.isLoading, me.isError, me.data, isPublic, pathname, router]);
 
+  useEffect(() => {
+    const el = bottomNavRef.current;
+    if (!el) {
+      setBottomNavHeight(0);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      setBottomNavHeight(entries[0]?.contentRect.height ?? 0);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [authed]);
+
   async function handleLogout() {
     await logout();
     queryClient.clear();
     router.push("/");
   }
 
-  const authed = Boolean(me.data && me.data.onboarded && !me.isError);
   const isAdmin = me.data?.role === "COMMUNITY_ADMIN" || me.data?.role === "SUPER_ADMIN";
   const isSuperAdmin = me.data?.role === "SUPER_ADMIN";
 
@@ -156,10 +174,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className={cn("mx-auto max-w-6xl px-4 py-6 sm:py-8", authed && "pb-24 md:pb-8")}>{children}</main>
+      <main
+        className={cn("mx-auto max-w-6xl px-4 py-6 sm:py-8")}
+        // Bottom padding always covers the fixed bottom nav's real measured height (plus a small
+        // buffer), never a hardcoded guess — see the ResizeObserver above. On desktop, where the
+        // nav is `md:hidden`, the observed height is 0 and this falls back to a flat 2rem.
+        style={authed ? { paddingBottom: `max(2rem, ${bottomNavHeight + 16}px)` } : undefined}
+      >
+        {children}
+      </main>
 
       {authed && (
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_92%,transparent)] backdrop-blur-xl pb-[env(safe-area-inset-bottom)] md:hidden">
+        <nav
+          ref={bottomNavRef}
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--background)_92%,transparent)] backdrop-blur-xl pb-[env(safe-area-inset-bottom)] md:hidden"
+        >
           <div className="mx-auto flex max-w-6xl items-stretch justify-around">
             {[
               { href: "/marketplace", label: "Browse", icon: Store },
