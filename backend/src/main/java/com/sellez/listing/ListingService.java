@@ -172,6 +172,8 @@ public class ListingService {
         Sort springSort = switch (sort == null ? "newest" : sort) {
             case "updated" -> Sort.by(Sort.Direction.DESC, "updatedAt");
             case "rating" -> Sort.by(Sort.Direction.DESC, "seller.ratingAvg");
+            case "price_asc" -> Sort.by(Sort.Direction.ASC, "price");
+            case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
         return listings.findAll(spec, PageRequest.of(page, Math.min(size, 40), springSort)).map(l -> toCard(l, principal));

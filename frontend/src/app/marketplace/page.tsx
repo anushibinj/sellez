@@ -24,6 +24,8 @@ function SortSelect({ value, onChange }: { value: string; onChange: (v: string) 
       <option value="newest">Newest</option>
       <option value="updated">Recently updated</option>
       <option value="rating">Seller rating</option>
+      <option value="price_asc">Price (Ascending)</option>
+      <option value="price_desc">Price (Descending)</option>
     </Select>
   );
 }
