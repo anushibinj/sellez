@@ -125,6 +125,26 @@ public class AdminService {
     }
 
     @Transactional
+    public ListingServiceView takeDown(UserPrincipal principal, String publicId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw ApiException.badRequest("A takedown reason is required.");
+        }
+        Listing listing = moderate(principal, publicId);
+        if (listing.getStatus() != ListingStatus.ACTIVE && listing.getStatus() != ListingStatus.SOLD) {
+            throw ApiException.badRequest("Only active or sold listings can be taken down.");
+        }
+        String sanitized = TextSanitizer.sanitize(reason);
+        listing.setStatus(ListingStatus.TAKEN_DOWN);
+        listing.setTakedownReason(sanitized);
+        listing.setUpdatedAt(Instant.now());
+        listings.save(listing);
+        String priceLabel = listing.getCurrency() + " " + listing.getPrice();
+        notifications.listingTakenDown(listing.getSeller().getEmail(), listing.getTitle(), priceLabel, sanitized);
+        auditService.log(principal.getId(), principal.getCommunityId(), "LISTING_TAKEN_DOWN", "listing", listing.getId().toString(), Map.of("reason", sanitized));
+        return toView(listing);
+    }
+
+    @Transactional
     public ListingServiceView updateCategory(UserPrincipal principal, String publicId, ListingCategory category) {
         Listing listing = moderate(principal, publicId);
         listing.setCategory(category);

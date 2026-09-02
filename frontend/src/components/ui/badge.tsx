@@ -29,6 +29,7 @@ const LISTING_STATUS_TONE: Record<string, VariantProps<typeof badgeVariants>["to
   SOLD: "info",
   REJECTED: "danger",
   REVOKED: "danger",
+  TAKEN_DOWN: "danger",
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

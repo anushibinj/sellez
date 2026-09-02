@@ -4,8 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Flag, ImageOff, MapPin, MessageCircle, Pencil, CheckCircle2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { AlertTriangle, Flag, ImageOff, MapPin, MessageCircle, Pencil, CheckCircle2, ShieldOff } from "lucide-react";
+import { api, getMe } from "@/lib/api";
 import { ListingDetail, REPORT_REASONS } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ export default function ListingDetailPage() {
     queryKey: ["rating", publicId],
     queryFn: () => api<{ stars: number } | null>(`/ratings?listingPublicId=${publicId}`),
   });
+  const me = useQuery({ queryKey: ["me"], queryFn: getMe, retry: false });
+  const isAdmin = me.data?.role === "COMMUNITY_ADMIN" || me.data?.role === "SUPER_ADMIN";
   const [reportOpen, setReportOpen] = useState(false);
   const [reason, setReason] = useState("SPAM");
   const [details, setDetails] = useState("");
@@ -32,6 +34,9 @@ export default function ListingDetailPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [submittingReport, setSubmittingReport] = useState(false);
   const [submittingRating, setSubmittingRating] = useState(false);
+  const [takedownOpen, setTakedownOpen] = useState(false);
+  const [takedownReasonInput, setTakedownReasonInput] = useState("");
+  const [submittingTakedown, setSubmittingTakedown] = useState(false);
 
   if (listing.isLoading) {
     return (
@@ -60,6 +65,20 @@ export default function ListingDetailPage() {
       setReportOpen(false);
     } finally {
       setSubmittingReport(false);
+    }
+  }
+
+  async function submitTakedown() {
+    if (!takedownReasonInput.trim()) return;
+    setSubmittingTakedown(true);
+    try {
+      await api(`/admin/listings/${item.publicId}/takedown`, { method: "POST", body: JSON.stringify({ reason: takedownReasonInput }) });
+      toast.success("Listing taken down. The seller has been notified by email.");
+      setTakedownReasonInput("");
+      setTakedownOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["listing", publicId] });
+    } finally {
+      setSubmittingTakedown(false);
     }
   }
 
@@ -103,6 +122,16 @@ export default function ListingDetailPage() {
             <p className="text-2xl font-semibold text-[var(--accent)]">{formatPrice(item.price, item.currency)}</p>
           </div>
 
+          {item.owner && item.status === "TAKEN_DOWN" && item.takedownReason && (
+            <div className="flex items-start gap-2.5 rounded-[var(--radius-md)] bg-[var(--danger-tint)] p-3.5 text-sm text-[var(--danger)]">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="font-medium">Taken down by a community admin</p>
+                <p className="mt-0.5">{item.takedownReason}</p>
+              </div>
+            </div>
+          )}
+
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--muted-foreground)]">{item.description}</p>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -144,6 +173,11 @@ export default function ListingDetailPage() {
               </Button>
             )}
             {item.owner && <Button variant="outline" onClick={() => router.push(`/listings/${item.publicId}/edit`)}><Pencil className="size-4" /> Edit</Button>}
+            {isAdmin && (item.status === "ACTIVE" || item.status === "SOLD") && (
+              <Button variant="danger" onClick={() => setTakedownOpen(true)}>
+                <ShieldOff className="size-4" /> Take down
+              </Button>
+            )}
           </div>
 
           {!item.owner && item.status === "SOLD" && !rating.data && (
@@ -183,6 +217,28 @@ export default function ListingDetailPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setReportOpen(false)}>Cancel</Button>
             <Button variant="danger" onClick={submitReport} loading={submittingReport}>Report listing</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={takedownOpen} onOpenChange={setTakedownOpen}>
+        <DialogContent>
+          <DialogTitle>Take down this listing</DialogTitle>
+          <DialogDescription>
+            The listing will be removed from the marketplace immediately. The seller will be emailed the reason below and can see it in &quot;My listings&quot;.
+          </DialogDescription>
+          <Textarea
+            className="mt-4"
+            placeholder="Why is this listing being taken down? (required)"
+            value={takedownReasonInput}
+            onChange={(e) => setTakedownReasonInput(e.target.value)}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setTakedownOpen(false)}>Cancel</Button>
+            <Button variant="danger" onClick={submitTakedown} loading={submittingTakedown} disabled={!takedownReasonInput.trim()}>
+              Take down listing
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

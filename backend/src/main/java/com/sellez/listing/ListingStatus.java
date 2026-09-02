@@ -6,5 +6,6 @@ public enum ListingStatus {
     ACTIVE,
     SOLD,
     REVOKED,
-    REJECTED
+    REJECTED,
+    TAKEN_DOWN
 }

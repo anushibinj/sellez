@@ -80,8 +80,9 @@ public class ListingService {
             attachImages(listing, files, true);
         }
         listing.setUpdatedAt(Instant.now());
-        if (listing.getStatus() == ListingStatus.REJECTED) {
+        if (listing.getStatus() == ListingStatus.REJECTED || listing.getStatus() == ListingStatus.TAKEN_DOWN) {
             listing.setStatus(ListingStatus.DRAFT);
+            listing.setTakedownReason(null);
         }
         listings.save(listing);
         return toResponse(listing, principal, true);
@@ -271,7 +272,8 @@ public class ListingService {
                 seller,
                 images,
                 owner,
-                listing.getCommunity().getDisplayName()
+                listing.getCommunity().getDisplayName(),
+                listing.getTakedownReason()
         );
     }
 
@@ -308,7 +310,8 @@ public class ListingService {
     public record SellerPublic(String alias, String avatarColor, java.math.BigDecimal ratingAvg, int ratingCount) {}
     public record ListingResponse(String publicId, String title, String description, BigDecimal price, String currency, String category,
                                   String condition, String location, String status, Instant createdAt, Instant updatedAt,
-                                  Instant soldAt, SellerPublic seller, List<String> images, boolean owner, String communityName) {}
+                                  Instant soldAt, SellerPublic seller, List<String> images, boolean owner, String communityName,
+                                  String takedownReason) {}
     public record ListingCard(String publicId, String title, BigDecimal price, String currency, String category, String condition, String status,
                               Instant createdAt, Instant updatedAt, String coverImage, String sellerAlias, String sellerColor,
                               java.math.BigDecimal sellerRating, boolean owner) {}

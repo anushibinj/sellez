@@ -67,6 +67,9 @@ public class Listing {
     @Column(name = "sold_at")
     private Instant soldAt;
 
+    @Column(name = "takedown_reason", columnDefinition = "text")
+    private String takedownReason;
+
     @OneToMany(mappedBy = "listing", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     private List<ListingImage> images = new ArrayList<>();

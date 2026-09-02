@@ -52,6 +52,7 @@ export type ListingDetail = {
   images: string[];
   owner: boolean;
   communityName: string;
+  takedownReason: string | null;
 };
 
 export type ChatSummary = {

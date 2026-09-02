@@ -45,6 +45,14 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void listingTakenDown(String email, String title, String priceLabel, String reason) {
+        send(email, "Listing taken down", html("Your listing was taken down",
+                "<p><strong>" + escape(title) + "</strong> (" + escape(priceLabel) + ") was removed by a community admin and is no longer visible.</p>"
+                        + "<p>Reason: " + escape(reason) + "</p>"
+                        + "<p>You can see this status and reason any time in \"My listings\".</p>"));
+    }
+
+    @Override
     public void newChat(String email, String listingTitle) {
         send(email, "New interested buyer", html("Someone is interested",
                 "<p>A community member started a private chat about <strong>" + escape(listingTitle) + "</strong>.</p>"

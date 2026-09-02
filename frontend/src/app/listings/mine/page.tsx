@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ImageOff, PlusCircle, Undo2 } from "lucide-react";
+import { AlertTriangle, ImageOff, PlusCircle, Undo2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { ListingDetail } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,12 @@ export default function MyListingsPage() {
                   <StatusBadge status={item.status} />
                   <span className="text-sm text-[var(--muted-foreground)]">{formatPrice(item.price, item.currency)}</span>
                 </div>
+                {item.status === "TAKEN_DOWN" && item.takedownReason && (
+                  <p className="flex items-start gap-1.5 text-sm text-[var(--danger)]">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    {item.takedownReason}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 {item.status === "UNDER_REVIEW" && (

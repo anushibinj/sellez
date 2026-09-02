@@ -43,6 +43,11 @@ public class AdminController {
         return adminService.returnListing(AuthSupport.requireUser(), publicId, body.reason());
     }
 
+    @PostMapping("/listings/{publicId}/takedown")
+    public AdminService.ListingServiceView takeDown(@PathVariable String publicId, @Valid @RequestBody AdminService.ReasonRequest body) {
+        return adminService.takeDown(AuthSupport.requireUser(), publicId, body.reason());
+    }
+
     @PatchMapping("/listings/{publicId}/category")
     public AdminService.ListingServiceView updateCategory(@PathVariable String publicId, @Valid @RequestBody AdminService.CategoryRequest body) {
         return adminService.updateCategory(AuthSupport.requireUser(), publicId, body.category());
