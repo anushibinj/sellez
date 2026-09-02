@@ -13,3 +13,6 @@
 - [x] As a community admin or super admin, I should be able to "take down" any product listing at any time if I feel it is inappropriate. I should write a mandatory note as to why the product was taken down. And the listing owner should receive an e-mail with the reason and listing detail. The listing owner should see the status & reason of the taken down ad in their "My listings" page.
 - [x] When I'm in the desktop browser and zoomed in to 200%, the main body is getting covered at the end by the bottom navbar. Note that the responsive mobile mode is fine and the main body is not covered there.
 - [x] In the filter section, show a "Clear all filters" button.
+- [ ] As a community admin, if I unlist a product, I should have access to see all products and make the unlisted product available again.
+- [ ] As a listing owner, if my product gets unlisted, I should be able to appeal to the community admin to bring it back up.
+- [ ] If someone tries to open an unlisted product via its shared link, it should still open but show a warning banner that the product is unlisted/sold, etc and that no further action can be taken upon it.
