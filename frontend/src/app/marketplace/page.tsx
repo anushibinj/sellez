@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ChevronDown, LayoutGrid, List, PlusCircle, Search, SlidersHorizontal, ShoppingBag } from "lucide-react";
+import { ChevronDown, LayoutGrid, List, PlusCircle, Search, SlidersHorizontal, ShoppingBag, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { CATEGORIES, ListingCard } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -110,6 +110,12 @@ export default function MarketplacePage() {
   const params = useMemo(() => ({ q, categories, minPrice, maxPrice, sort }), [q, categories, minPrice, maxPrice, sort]);
   const activeFilterCount = [categories.length > 0, minPrice, maxPrice].filter(Boolean).length;
 
+  function clearFilters() {
+    setCategories([]);
+    setMinPrice("");
+    setMaxPrice("");
+  }
+
   const listings = useInfiniteQuery({
     queryKey: ["listings", params],
     initialPageParam: 0,
@@ -186,6 +192,11 @@ export default function MarketplacePage() {
           <Input className="w-20" placeholder="Min" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} inputMode="decimal" aria-label="Minimum price" />
           <Input className="w-20" placeholder="Max" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} inputMode="decimal" aria-label="Maximum price" />
           <div className="w-44"><SortSelect value={sort} onChange={setSort} /></div>
+          {activeFilterCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="shrink-0 text-[var(--muted-foreground)]">
+              <X className="size-3.5" /> Clear filters
+            </Button>
+          )}
         </div>
         {ViewToggle}
       </div>
@@ -212,7 +223,14 @@ export default function MarketplacePage() {
               <p className="mb-1.5 text-xs font-medium text-[var(--muted-foreground)]">Sort by</p>
               <SortSelect value={sort} onChange={setSort} />
             </div>
-            <Button className="w-full" onClick={() => setFiltersOpen(false)}>Show results</Button>
+            <div className="flex gap-2">
+              {activeFilterCount > 0 && (
+                <Button variant="outline" className="flex-1" onClick={clearFilters}>
+                  <X className="size-4" /> Clear all filters
+                </Button>
+              )}
+              <Button className="flex-1" onClick={() => setFiltersOpen(false)}>Show results</Button>
+            </div>
           </div>
         </SheetContent>
       </Dialog>
