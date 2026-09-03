@@ -15,4 +15,4 @@
 - [x] In the filter section, show a "Clear all filters" button.
 - [ ] As a community admin, if I unlist a product, I should have access to see all products and make the unlisted product available again.
 - [ ] As a listing owner, if my product gets unlisted, I should be able to appeal to the community admin to bring it back up.
-- [ ] If someone tries to open an unlisted product via its shared link, it should still open but show a warning banner that the product is unlisted/sold, etc and that no further action can be taken upon it.
+- [ ] If someone tries to open an unlisted product via its shared link, it should still open, and show all the details of the product but show a warning banner that the product is unlisted/sold, etc and that no further action can be taken upon it.
