@@ -36,6 +36,10 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", message);
     }
 
+    public static ApiException serverError(String message) {
+        return new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "SERVER_ERROR", message);
+    }
+
     public HttpStatus getStatus() { return status; }
     public String getCode() { return code; }
 }

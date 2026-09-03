@@ -8,7 +8,7 @@ See [PRD.md](PRD.md) for the full product spec.
 
 ## Tech stack
 
-**Backend** — Java 17, Spring Boot 3.5 (Web, Security, Data JPA, WebSocket, Actuator), PostgreSQL, Flyway migrations, JWT auth (jjwt), AWS SES/SNS for email/notifications, Maven.
+**Backend** — Java 17, Spring Boot 3.5 (Web, Security, Data JPA, WebSocket, Actuator), PostgreSQL, Flyway migrations, JWT auth (jjwt), AWS SES/SNS for email/notifications, pluggable file storage (local disk, S3-compatible, or Firebase Storage) with Thumbnailator for image compression, Maven.
 
 **Frontend** — Next.js 15 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4, TanStack Query, React Hook Form + Zod, Radix UI, STOMP over WebSocket for chat.
 
@@ -22,6 +22,18 @@ frontend/   Next.js app (src/app: marketplace, listing, listings, chats, login,
 ```
 
 Each backend package is a self-contained module (entity, repository, service, controller) for its domain area. The frontend calls the backend through a Next.js rewrite (`/backend-api/*` → `${API_PROXY_TARGET}/api/*`, `/backend-ws/*` → `.../ws/*`), so the browser never talks to the backend origin directly.
+
+## File storage & image uploads
+
+Every image a user uploads (listing photos, chat images, appeal evidence) is downscaled and re-encoded to JPEG before it's stored — see `ImageCompressor` in `com.sellez.storage`. This runs the same way regardless of where the bytes end up, so file size and quality are consistent across backends.
+
+Where the bytes actually land is chosen by `STORAGE_TYPE` (`sellez.storage.type` in `application.yml`), with one `StorageBackend` implementation per option:
+
+- **`local`** (default) — written to `STORAGE_LOCAL_PATH` on disk and served back out through `GET /api/media/{key}`.
+- **`s3`** — written via the plain AWS SDK v2 `S3Client`. Pointing `S3_ENDPOINT` at a self-hosted S3-compatible server (SeaweedFS, MinIO, ...) instead of leaving it blank is enough to swap providers — nothing else in the code is AWS-specific. Leave `S3_ACCESS_KEY`/`S3_SECRET_KEY` blank against an unauthenticated dev gateway (e.g. a bare SeaweedFS S3 gateway); leave them blank with no custom endpoint to fall back to the SDK's normal AWS credential chain instead.
+- **`firebase`** — written to a Firebase Storage bucket via the Firebase Admin SDK.
+
+See the [environment variables](#backend-environment-variables) table below for the full set of `S3_*`/`FIREBASE_*` options.
 
 ## Prerequisites
 
@@ -100,8 +112,20 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 | `OTP_SEND_WINDOW_MINUTES` | `10` | OTP send rate-limit window |
 | `OTP_FIXED_CODE` | *(empty)* | If set, always use this code instead of a random one (local dev only) |
 | `SUPER_ADMIN_EMAILS` | `owner@sellez.local` | Comma-separated emails granted super-admin role |
-| `STORAGE_LOCAL_PATH` | `./uploads` | Local disk path for uploaded images |
-| `STORAGE_PUBLIC_BASE_URL` | `http://localhost:8080/api/media` | Public base URL for serving stored images |
+| `STORAGE_TYPE` | `local` | Which backend stores uploads: `local`, `s3`, or `firebase` |
+| `STORAGE_LOCAL_PATH` | `./uploads` | Local disk path for uploaded images (`local` only) |
+| `STORAGE_PUBLIC_BASE_URL` | `http://localhost:8080/api/media` | Public base URL for serving stored images (`local` only) |
+| `STORAGE_IMAGE_MAX_DIMENSION` | `1600` | Every uploaded image is downscaled so its longest edge is at most this many pixels (never upscaled) |
+| `STORAGE_IMAGE_QUALITY` | `0.82` | JPEG re-encode quality (0–1) applied to every uploaded image, regardless of backend |
+| `S3_BUCKET` | *(empty)* | Bucket name (`s3` only) |
+| `S3_REGION` | `us-east-1` | AWS region, or any placeholder value your S3-compatible server expects (`s3` only) |
+| `S3_ENDPOINT` | *(empty)* | Custom endpoint for an S3-compatible server such as SeaweedFS or MinIO; leave empty for real AWS S3 (`s3` only) |
+| `S3_ACCESS_KEY` | *(empty)* | Access key; leave both key vars empty for an unauthenticated dev gateway, or omit both to use the AWS SDK's default credential chain (`s3` only) |
+| `S3_SECRET_KEY` | *(empty)* | Secret key (`s3` only) |
+| `S3_PATH_STYLE_ACCESS` | `false` | Force path-style bucket addressing (`https://host/bucket/key`) — needed by most self-hosted S3-compatible servers (`s3` only) |
+| `S3_PUBLIC_BASE_URL` | *(empty)* | Override the URL handed back to clients, e.g. a CDN in front of the bucket; derived from the bucket/endpoint if empty (`s3` only) |
+| `FIREBASE_STORAGE_BUCKET` | *(empty)* | Firebase Storage bucket name, e.g. `my-project.appspot.com` (`firebase` only) |
+| `FIREBASE_CREDENTIALS_PATH` | *(empty)* | Path to a service-account JSON key; empty falls back to Application Default Credentials (`firebase` only) |
 | `EMAIL_PROVIDER` | `logging` | `logging` (console) or the AWS SES-backed provider |
 | `EMAIL_FROM` | `noreply@sellez.local` | From address for outgoing email |
 | `AWS_REGION` | `us-east-1` | AWS region for SES/SNS |
