@@ -53,6 +53,12 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void listingRestored(String email, String title) {
+        send(email, "Listing restored", html("Your listing is live again",
+                "<p><strong>" + escape(title) + "</strong> was made available again by a community admin and is visible to your community.</p>"));
+    }
+
+    @Override
     public void newChat(String email, String listingTitle) {
         send(email, "New interested buyer", html("Someone is interested",
                 "<p>A community member started a private chat about <strong>" + escape(listingTitle) + "</strong>.</p>"

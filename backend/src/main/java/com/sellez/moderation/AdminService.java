@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -75,10 +76,11 @@ public class AdminService {
     @Transactional(readOnly = true)
     public List<ListingServiceView> queue(UserPrincipal principal, ListingStatus status) {
         banService.requireCommunityAdmin(principal);
-        ListingStatus filter = status == null ? ListingStatus.UNDER_REVIEW : status;
+        // No status filter means "every listing in my community" — used by the admin's all-listings view.
         return listings.findAll().stream()
                 .filter(l -> l.getCommunity().getId().equals(principal.getCommunityId()))
-                .filter(l -> l.getStatus() == filter)
+                .filter(l -> status == null || l.getStatus() == status)
+                .sorted(Comparator.comparing(Listing::getUpdatedAt).reversed())
                 .map(this::toView)
                 .toList();
     }
@@ -141,6 +143,21 @@ public class AdminService {
         String priceLabel = listing.getCurrency() + " " + listing.getPrice();
         notifications.listingTakenDown(listing.getSeller().getEmail(), listing.getTitle(), priceLabel, sanitized);
         auditService.log(principal.getId(), principal.getCommunityId(), "LISTING_TAKEN_DOWN", "listing", listing.getId().toString(), Map.of("reason", sanitized));
+        return toView(listing);
+    }
+
+    @Transactional
+    public ListingServiceView restore(UserPrincipal principal, String publicId) {
+        Listing listing = moderate(principal, publicId);
+        if (listing.getStatus() != ListingStatus.TAKEN_DOWN) {
+            throw ApiException.badRequest("Only taken-down listings can be restored.");
+        }
+        listing.setStatus(ListingStatus.ACTIVE);
+        listing.setTakedownReason(null);
+        listing.setUpdatedAt(Instant.now());
+        listings.save(listing);
+        notifications.listingRestored(listing.getSeller().getEmail(), listing.getTitle());
+        auditService.log(principal.getId(), principal.getCommunityId(), "LISTING_RESTORED", "listing", listing.getId().toString(), Map.of());
         return toView(listing);
     }
 
@@ -218,13 +235,13 @@ public class AdminService {
         return new ListingServiceView(listing.getPublicId(), listing.getTitle(), listing.getDescription(),
                 listing.getPrice(), listing.getCurrency() == null ? "USD" : listing.getCurrency(),
                 listing.getCategory().name(), images, listing.getStatus().name(),
-                listing.getSeller().getAlias(), listing.getCreatedAt(), listing.getUpdatedAt());
+                listing.getSeller().getAlias(), listing.getCreatedAt(), listing.getUpdatedAt(), listing.getTakedownReason());
     }
 
     public record Dashboard(long activeListings, long pendingReview, long soldToday, long openReports, long bannedUsers) {}
     public record ListingServiceView(String publicId, String title, String description, java.math.BigDecimal price,
                                      String currency, String category, List<String> images, String status,
-                                     String sellerAlias, Instant createdAt, Instant updatedAt) {}
+                                     String sellerAlias, Instant createdAt, Instant updatedAt, String takedownReason) {}
     public record BanRequest(String type, @Min(1) @Max(10) int days, @NotBlank String reason) {}
     public record MemberView(UUID id, String alias, String avatarColor, String role, java.math.BigDecimal ratingAvg, int ratingCount) {}
     public record ReportView(UUID id, String reason, String details, String status, String listingPublicId, UUID chatId, Instant createdAt) {}
