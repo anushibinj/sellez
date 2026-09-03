@@ -59,6 +59,15 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public void listingAppealResolved(String email, String title, String status, String note) {
+        boolean approved = "APPROVED".equalsIgnoreCase(status);
+        send(email, "Appeal reviewed", html(approved ? "Your listing is back up" : "Your appeal was not approved",
+                "<p>Your appeal for <strong>" + escape(title) + "</strong> was " + escape(status.toLowerCase()) + " by a community admin.</p>"
+                        + (note != null && !note.isBlank() ? "<p>Note: " + escape(note) + "</p>" : "")
+                        + (approved ? "<p>The listing is visible to your community again.</p>" : "")));
+    }
+
+    @Override
     public void newChat(String email, String listingTitle) {
         send(email, "New interested buyer", html("Someone is interested",
                 "<p>A community member started a private chat about <strong>" + escape(listingTitle) + "</strong>.</p>"

@@ -73,4 +73,14 @@ public class AdminController {
     public List<AdminService.ReportView> reports() {
         return adminService.openReports(AuthSupport.requireUser());
     }
+
+    @GetMapping("/listing-appeals")
+    public List<AdminService.ListingAppealView> listingAppeals() {
+        return adminService.listingAppeals(AuthSupport.requireUser());
+    }
+
+    @PostMapping("/listing-appeals/{id}/resolve")
+    public AdminService.ListingAppealView resolveListingAppeal(@PathVariable UUID id, @RequestBody AdminService.ResolveListingAppealRequest body) {
+        return adminService.resolveListingAppeal(AuthSupport.requireUser(), id, body.approve(), body.note());
+    }
 }

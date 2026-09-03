@@ -45,10 +45,11 @@ public class AdminService {
     private final AuditService auditService;
     private final CommunityRepository communities;
     private final StorageService storage;
+    private final ListingAppealRepository listingAppeals;
 
     public AdminService(BanService banService, ListingRepository listings, UserAccountRepository users, BanRepository bans,
                         ReportRepository reports, NotificationService notifications, AuditService auditService,
-                        CommunityRepository communities, StorageService storage) {
+                        CommunityRepository communities, StorageService storage, ListingAppealRepository listingAppeals) {
         this.banService = banService;
         this.listings = listings;
         this.users = users;
@@ -58,6 +59,7 @@ public class AdminService {
         this.auditService = auditService;
         this.communities = communities;
         this.storage = storage;
+        this.listingAppeals = listingAppeals;
     }
 
     public Dashboard dashboard(UserPrincipal principal) {
@@ -69,7 +71,8 @@ public class AdminService {
                 listings.countByCommunityAndStatus(community, ListingStatus.UNDER_REVIEW),
                 listings.countByCommunityAndStatusAndSoldAtAfter(community, ListingStatus.SOLD, startOfDay),
                 reports.countByStatus(ReportStatus.OPEN),
-                bans.countByCommunity_IdAndExpiresAtAfter(community.getId(), Instant.now())
+                bans.countByCommunity_IdAndExpiresAtAfter(community.getId(), Instant.now()),
+                listingAppeals.countByListing_Community_IdAndStatus(community.getId(), ListingAppealStatus.PENDING)
         );
     }
 
@@ -210,6 +213,50 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
+    public List<ListingAppealView> listingAppeals(UserPrincipal principal) {
+        banService.requireCommunityAdmin(principal);
+        return listingAppeals.findAllByOrderByCreatedAtDesc().stream()
+                .filter(a -> principal.getRole() == UserRole.SUPER_ADMIN
+                        || a.getListing().getCommunity().getId().equals(principal.getCommunityId()))
+                .map(this::toAppealView)
+                .toList();
+    }
+
+    @Transactional
+    public ListingAppealView resolveListingAppeal(UserPrincipal principal, UUID appealId, boolean approve, String note) {
+        banService.requireCommunityAdmin(principal);
+        ListingAppeal appeal = listingAppeals.findById(appealId).orElseThrow(() -> ApiException.notFound("Appeal not found."));
+        Listing listing = appeal.getListing();
+        if (!listing.getCommunity().getId().equals(principal.getCommunityId()) && principal.getRole() != UserRole.SUPER_ADMIN) {
+            throw ApiException.forbidden("This appeal is outside your community.");
+        }
+        if (appeal.getStatus() != ListingAppealStatus.PENDING) {
+            throw ApiException.badRequest("This appeal was already resolved.");
+        }
+        String sanitizedNote = note == null || note.isBlank() ? null : TextSanitizer.sanitize(note);
+        appeal.setStatus(approve ? ListingAppealStatus.APPROVED : ListingAppealStatus.DENIED);
+        appeal.setReviewedBy(users.getReferenceById(principal.getId()));
+        appeal.setResolutionNote(sanitizedNote);
+        if (approve && listing.getStatus() == ListingStatus.TAKEN_DOWN) {
+            listing.setStatus(ListingStatus.ACTIVE);
+            listing.setTakedownReason(null);
+            listing.setUpdatedAt(Instant.now());
+            listings.save(listing);
+        }
+        listingAppeals.save(appeal);
+        notifications.listingAppealResolved(listing.getSeller().getEmail(), listing.getTitle(), appeal.getStatus().name(), sanitizedNote);
+        auditService.log(principal.getId(), principal.getCommunityId(), "LISTING_APPEAL_RESOLVED", "listing", listing.getId().toString(), Map.of("status", appeal.getStatus().name()));
+        return toAppealView(appeal);
+    }
+
+    private ListingAppealView toAppealView(ListingAppeal appeal) {
+        Listing listing = appeal.getListing();
+        return new ListingAppealView(appeal.getId(), listing.getPublicId(), listing.getTitle(), listing.getPrice(),
+                listing.getCurrency() == null ? "USD" : listing.getCurrency(), listing.getTakedownReason(),
+                appeal.getMessage(), appeal.getStatus().name(), listing.getSeller().getAlias(), appeal.getCreatedAt());
+    }
+
+    @Transactional(readOnly = true)
     public List<ReportView> openReports(UserPrincipal principal) {
         banService.requireCommunityAdmin(principal);
         return reports.findByStatusOrderByCreatedAtDesc(ReportStatus.OPEN).stream()
@@ -238,7 +285,7 @@ public class AdminService {
                 listing.getSeller().getAlias(), listing.getCreatedAt(), listing.getUpdatedAt(), listing.getTakedownReason());
     }
 
-    public record Dashboard(long activeListings, long pendingReview, long soldToday, long openReports, long bannedUsers) {}
+    public record Dashboard(long activeListings, long pendingReview, long soldToday, long openReports, long bannedUsers, long pendingListingAppeals) {}
     public record ListingServiceView(String publicId, String title, String description, java.math.BigDecimal price,
                                      String currency, String category, List<String> images, String status,
                                      String sellerAlias, Instant createdAt, Instant updatedAt, String takedownReason) {}
@@ -247,4 +294,8 @@ public class AdminService {
     public record ReportView(UUID id, String reason, String details, String status, String listingPublicId, UUID chatId, Instant createdAt) {}
     public record ReasonRequest(@NotBlank String reason) {}
     public record CategoryRequest(@NotNull ListingCategory category) {}
+    public record ListingAppealView(UUID id, String listingPublicId, String listingTitle, java.math.BigDecimal listingPrice,
+                                    String listingCurrency, String takedownReason, String message, String status,
+                                    String sellerAlias, Instant createdAt) {}
+    public record ResolveListingAppealRequest(boolean approve, String note) {}
 }

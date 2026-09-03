@@ -4,6 +4,7 @@ import com.sellez.security.AuthSupport;
 import com.sellez.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -82,5 +83,11 @@ public class ListingController {
     public ListingService.ListingResponse sold(@PathVariable String publicId) {
         UserPrincipal user = AuthSupport.requireUser();
         return listingService.markSold(user, publicId, chatBridge);
+    }
+
+    @PostMapping("/{publicId}/appeal")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void appeal(@PathVariable String publicId, @Valid @RequestBody ListingService.AppealRequest body) {
+        listingService.appealTakedown(AuthSupport.requireUser(), publicId, body.message());
     }
 }

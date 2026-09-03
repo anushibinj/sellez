@@ -53,6 +53,7 @@ export type ListingDetail = {
   owner: boolean;
   communityName: string;
   takedownReason: string | null;
+  appealStatus: string | null;
 };
 
 export type ChatSummary = {

@@ -6,6 +6,9 @@ import com.sellez.common.ApiException;
 import com.sellez.common.TextSanitizer;
 import com.sellez.config.SellezProperties;
 import com.sellez.moderation.BanService;
+import com.sellez.moderation.ListingAppeal;
+import com.sellez.moderation.ListingAppealRepository;
+import com.sellez.moderation.ListingAppealStatus;
 import com.sellez.security.UserPrincipal;
 import com.sellez.storage.StorageService;
 import com.sellez.user.UserAccount;
@@ -38,15 +41,18 @@ public class ListingService {
     private final SellezProperties properties;
     private final AuditService auditService;
     private final BanService banService;
+    private final ListingAppealRepository listingAppeals;
 
     public ListingService(ListingRepository listings, UserAccountRepository users, StorageService storage,
-                          SellezProperties properties, AuditService auditService, BanService banService) {
+                          SellezProperties properties, AuditService auditService, BanService banService,
+                          ListingAppealRepository listingAppeals) {
         this.listings = listings;
         this.users = users;
         this.storage = storage;
         this.properties = properties;
         this.auditService = auditService;
         this.banService = banService;
+        this.listingAppeals = listingAppeals;
     }
 
     @Transactional
@@ -139,7 +145,11 @@ public class ListingService {
             throw ApiException.forbidden("This listing belongs to another community.");
         }
         boolean owner = listing.getSeller().getId().equals(principal.getId());
-        if (!owner && listing.getStatus() != ListingStatus.ACTIVE && listing.getStatus() != ListingStatus.SOLD) {
+        // Taken-down listings stay reachable by shared link (with a warning banner on the frontend)
+        // so a link someone already has doesn't just dead-end into a 404.
+        boolean publiclyViewable = listing.getStatus() == ListingStatus.ACTIVE || listing.getStatus() == ListingStatus.SOLD
+                || listing.getStatus() == ListingStatus.TAKEN_DOWN;
+        if (!owner && !publiclyViewable) {
             throw ApiException.notFound("Listing not found.");
         }
         return toResponse(listing, principal, owner);
@@ -185,6 +195,26 @@ public class ListingService {
         return listings.findBySeller_IdOrderByUpdatedAtDesc(principal.getId()).stream()
                 .map(l -> toResponse(l, principal, true))
                 .toList();
+    }
+
+    @Transactional
+    public void appealTakedown(UserPrincipal principal, String publicId, String message) {
+        if (message == null || message.isBlank()) {
+            throw ApiException.badRequest("A message is required.");
+        }
+        Listing listing = owned(principal, publicId);
+        if (listing.getStatus() != ListingStatus.TAKEN_DOWN) {
+            throw ApiException.badRequest("Only taken-down listings can be appealed.");
+        }
+        if (listingAppeals.existsByListing_IdAndStatus(listing.getId(), ListingAppealStatus.PENDING)) {
+            throw ApiException.badRequest("You already have a pending appeal for this listing.");
+        }
+        ListingAppeal appeal = new ListingAppeal();
+        appeal.setListing(listing);
+        appeal.setSubmittedBy(users.getReferenceById(principal.getId()));
+        appeal.setMessage(TextSanitizer.sanitize(message));
+        listingAppeals.save(appeal);
+        auditService.log(principal.getId(), principal.getCommunityId(), "LISTING_APPEAL_SUBMITTED", "listing", listing.getId().toString(), Map.of());
     }
 
     Listing owned(UserPrincipal principal, String publicId) {
@@ -256,6 +286,13 @@ public class ListingService {
         SellerPublic seller = new SellerPublic(listing.getSeller().getAlias(), listing.getSeller().getAvatarColor(),
                 listing.getSeller().getRatingAvg(), listing.getSeller().getRatingCount());
         List<String> images = listing.getImages().stream().map(img -> storage.publicUrl(img.getStorageKey())).toList();
+        boolean takenDown = listing.getStatus() == ListingStatus.TAKEN_DOWN;
+        // The moderation reason is only shown to the owner — a shared link only needs to know the
+        // listing is gone, not the specific admin note behind it.
+        String reasonForViewer = owner ? listing.getTakedownReason() : null;
+        String appealStatus = owner && takenDown
+                ? listingAppeals.findTopByListing_IdOrderByCreatedAtDesc(listing.getId()).map(a -> a.getStatus().name()).orElse(null)
+                : null;
         return new ListingResponse(
                 listing.getPublicId(),
                 listing.getTitle(),
@@ -273,7 +310,8 @@ public class ListingService {
                 images,
                 owner,
                 listing.getCommunity().getDisplayName(),
-                listing.getTakedownReason()
+                reasonForViewer,
+                appealStatus
         );
     }
 
@@ -311,11 +349,12 @@ public class ListingService {
     public record ListingResponse(String publicId, String title, String description, BigDecimal price, String currency, String category,
                                   String condition, String location, String status, Instant createdAt, Instant updatedAt,
                                   Instant soldAt, SellerPublic seller, List<String> images, boolean owner, String communityName,
-                                  String takedownReason) {}
+                                  String takedownReason, String appealStatus) {}
     public record ListingCard(String publicId, String title, BigDecimal price, String currency, String category, String condition, String status,
                               Instant createdAt, Instant updatedAt, String coverImage, String sellerAlias, String sellerColor,
                               java.math.BigDecimal sellerRating, boolean owner) {}
     public record CurrencyOptions(List<String> currencies, String defaultCurrency) {}
+    public record AppealRequest(@NotBlank String message) {}
 
     public interface ChatBridge {
         void onSold(Listing listing);

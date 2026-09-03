@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Flag, ImageOff, MapPin, MessageCircle, Pencil, CheckCircle2, ShieldOff } from "lucide-react";
+import { AlertTriangle, Flag, Gavel, ImageOff, MapPin, MessageCircle, Pencil, CheckCircle2, RefreshCcw, ShieldOff } from "lucide-react";
 import { api, getMe } from "@/lib/api";
 import { ListingDetail, REPORT_REASONS } from "@/lib/types";
 import { formatPrice } from "@/lib/utils";
@@ -37,6 +37,10 @@ export default function ListingDetailPage() {
   const [takedownOpen, setTakedownOpen] = useState(false);
   const [takedownReasonInput, setTakedownReasonInput] = useState("");
   const [submittingTakedown, setSubmittingTakedown] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [appealOpen, setAppealOpen] = useState(false);
+  const [appealMessage, setAppealMessage] = useState("");
+  const [submittingAppeal, setSubmittingAppeal] = useState(false);
 
   if (listing.isLoading) {
     return (
@@ -82,6 +86,31 @@ export default function ListingDetailPage() {
     }
   }
 
+  async function restoreListing() {
+    setRestoring(true);
+    try {
+      await api(`/admin/listings/${item.publicId}/restore`, { method: "POST" });
+      toast.success("Listing is available again.");
+      queryClient.invalidateQueries({ queryKey: ["listing", publicId] });
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  async function submitAppeal() {
+    if (!appealMessage.trim()) return;
+    setSubmittingAppeal(true);
+    try {
+      await api(`/listings/${item.publicId}/appeal`, { method: "POST", body: JSON.stringify({ message: appealMessage }) });
+      toast.success("Appeal sent to your community admin.");
+      setAppealMessage("");
+      setAppealOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["listing", publicId] });
+    } finally {
+      setSubmittingAppeal(false);
+    }
+  }
+
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
@@ -122,13 +151,50 @@ export default function ListingDetailPage() {
             <p className="text-2xl font-semibold text-[var(--accent)]">{formatPrice(item.price, item.currency)}</p>
           </div>
 
-          {item.owner && item.status === "TAKEN_DOWN" && item.takedownReason && (
-            <div className="flex items-start gap-2.5 rounded-[var(--radius-md)] bg-[var(--danger-tint)] p-3.5 text-sm text-[var(--danger)]">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <div>
-                <p className="font-medium">Taken down by a community admin</p>
-                <p className="mt-0.5">{item.takedownReason}</p>
+          {item.status === "TAKEN_DOWN" && (
+            <div className="space-y-3 rounded-[var(--radius-md)] bg-[var(--danger-tint)] p-3.5 text-sm text-[var(--danger)]">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <div>
+                  <p className="font-medium">
+                    {item.owner ? "Taken down by a community admin" : "This listing is no longer available"}
+                  </p>
+                  {item.owner && item.takedownReason && <p className="mt-0.5">{item.takedownReason}</p>}
+                  {!item.owner && <p className="mt-0.5">It was removed by a community admin. No further action can be taken on it.</p>}
+                </div>
               </div>
+              {item.owner && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-[var(--danger)]/20 pt-3">
+                  {item.appealStatus === "PENDING" ? (
+                    <p className="text-sm font-medium">Appeal submitted — waiting on your community admin.</p>
+                  ) : item.appealStatus === "DENIED" ? (
+                    <>
+                      <p className="text-sm font-medium">Your last appeal was denied.</p>
+                      <Button size="sm" variant="outline" onClick={() => setAppealOpen(true)}>
+                        <Gavel className="size-3.5" /> Appeal again
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => setAppealOpen(true)}>
+                      <Gavel className="size-3.5" /> Appeal this decision
+                    </Button>
+                  )}
+                </div>
+              )}
+              {!item.owner && isAdmin && (
+                <div className="border-t border-[var(--danger)]/20 pt-3">
+                  <Button size="sm" loading={restoring} onClick={restoreListing}>
+                    <RefreshCcw className="size-3.5" /> Make available again
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!item.owner && item.status === "SOLD" && (
+            <div className="flex items-start gap-2.5 rounded-[var(--radius-md)] bg-[var(--info-tint)] p-3.5 text-sm text-[var(--info)]">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <p>This item has already been sold. No further action can be taken on it.</p>
             </div>
           )}
 
@@ -159,7 +225,7 @@ export default function ListingDetailPage() {
                 <MessageCircle className="size-4" /> Message seller
               </Button>
             )}
-            {!item.owner && (
+            {!item.owner && item.status !== "TAKEN_DOWN" && (
               <Button variant="outline" onClick={() => setReportOpen(true)}>
                 <Flag className="size-4" /> Report
               </Button>
@@ -238,6 +304,26 @@ export default function ListingDetailPage() {
             <Button variant="ghost" onClick={() => setTakedownOpen(false)}>Cancel</Button>
             <Button variant="danger" onClick={submitTakedown} loading={submittingTakedown} disabled={!takedownReasonInput.trim()}>
               Take down listing
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={appealOpen} onOpenChange={setAppealOpen}>
+        <DialogContent>
+          <DialogTitle>Appeal this takedown</DialogTitle>
+          <DialogDescription>Explain why this listing should be made available again. Your community admin will review it.</DialogDescription>
+          <Textarea
+            className="mt-4"
+            placeholder="Why should this listing be restored? (required)"
+            value={appealMessage}
+            onChange={(e) => setAppealMessage(e.target.value)}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAppealOpen(false)}>Cancel</Button>
+            <Button onClick={submitAppeal} loading={submittingAppeal} disabled={!appealMessage.trim()}>
+              <Gavel className="size-4" /> Submit appeal
             </Button>
           </DialogFooter>
         </DialogContent>

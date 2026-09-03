@@ -7,6 +7,7 @@ public interface NotificationService {
     void listingReturned(String email, String title, String reason);
     void listingTakenDown(String email, String title, String priceLabel, String reason);
     void listingRestored(String email, String title);
+    void listingAppealResolved(String email, String title, String status, String note);
     void newChat(String email, String listingTitle);
     void newReply(String email, String listingTitle);
     void itemSold(String email, String listingTitle);
