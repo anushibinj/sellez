@@ -1,9 +1,8 @@
 import { Me } from "./types";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/backend-api";
+import { API_BASE_URL } from "./config";
 
 async function ensureCsrf() {
-  const res = await fetch(`${API_BASE}/csrf`, { credentials: "include" });
+  const res = await fetch(`${API_BASE_URL}/csrf`, { credentials: "include" });
   return res.json() as Promise<{ headerName: string; token: string }>;
 }
 
@@ -40,7 +39,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers,
     credentials: "include",

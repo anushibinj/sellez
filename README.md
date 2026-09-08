@@ -21,7 +21,7 @@ frontend/   Next.js app (src/app: marketplace, listing, listings, chats, login,
             onboarding, admin, super)
 ```
 
-Each backend package is a self-contained module (entity, repository, service, controller) for its domain area. The frontend calls the backend through a Next.js rewrite (`/backend-api/*` → `${API_PROXY_TARGET}/api/*`, `/backend-ws/*` → `.../ws/*`), so the browser never talks to the backend origin directly.
+Each backend package is a self-contained module (entity, repository, service, controller) for its domain area. The browser calls the backend directly at `NEXT_PUBLIC_BACKEND_URL` (no proxy) — `src/lib/config.ts` derives the REST base (`/api`) and the chat WebSocket URL (`/ws`) from it. Because the calls are cross-origin, the backend's `CORS_ALLOWED_ORIGINS` must list the frontend's origin, and cookies are sent with `credentials: "include"` (so a cross-site deployment needs `COOKIE_SAMESITE=None` + `COOKIE_SECURE=true`).
 
 ## File storage & image uploads
 
@@ -99,7 +99,7 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 | `DATABASE_PASSWORD` | `sellez` | DB password |
 | `UPLOAD_MAX_FILE_SIZE` | `8MB` | Max size per uploaded file |
 | `UPLOAD_MAX_REQUEST_SIZE` | `20MB` | Max total multipart request size |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Allowed CORS origins |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated origins allowed to call the API and open the chat WebSocket; must include the frontend's own origin since it calls the backend directly |
 | `JWT_SECRET` | *(dev placeholder)* | Secret for signing JWTs — must be ≥32 chars in production |
 | `ACCESS_TOKEN_MINUTES` | `15` | Access token lifetime |
 | `REFRESH_TOKEN_DAYS` | `30` | Refresh token lifetime |
@@ -141,9 +141,7 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | `/backend-api` | Base path the browser calls (proxied by Next.js) |
-| `NEXT_PUBLIC_WS_URL` | `ws://localhost:8080/ws` | WebSocket URL for chat |
-| `API_PROXY_TARGET` | `http://localhost:8080` | Backend origin the Next.js rewrite proxies to (server-side only) |
+| `NEXT_PUBLIC_BACKEND_URL` | `http://localhost:8080` | Root URL of the Spring Boot backend; the browser calls it directly. REST base (`/api`) and the chat WebSocket URL (`/ws`, `ws`/`wss` matched to the scheme) are derived from it |
 | `NEXT_PUBLIC_LISTING_CURRENCIES` | `USD,INR,EUR,GBP,AED,CAD,AUD` | Currency options shown in the listing form |
 | `NEXT_PUBLIC_LISTING_DEFAULT_CURRENCY` | `USD` | Default currency preselected in the listing form |
 

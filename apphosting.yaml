@@ -1,7 +1,5 @@
 runConfig:
   runtime: nodejs22
 env:
-  - variable: NEXT_PUBLIC_API_BASE_URL
-    secret: NEXT_PUBLIC_API_BASE_URL
-  - variable: NEXT_PUBLIC_WS_URL
-    secret: NEXT_PUBLIC_WS_URL
+  - variable: NEXT_PUBLIC_BACKEND_URL
+    secret: NEXT_PUBLIC_BACKEND_URL

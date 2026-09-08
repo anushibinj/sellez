@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Client } from "@stomp/stompjs";
 import { ArrowLeft, Flag, Paperclip, Send } from "lucide-react";
 import { api } from "@/lib/api";
+import { WS_URL } from "@/lib/config";
 import { ChatMessage, REPORT_REASONS } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, Input, Select, Skeleton, Textarea } from "@/components/ui/field";
@@ -35,9 +36,8 @@ export default function ChatThreadPage() {
   }, [messages.data]);
 
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws";
     const client = new Client({
-      brokerURL: url,
+      brokerURL: WS_URL,
       reconnectDelay: 4000,
       onConnect: () => {
         client.subscribe(`/topic/chats/${id}`, () => {
