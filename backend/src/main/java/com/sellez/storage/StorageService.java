@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Set;
 
 @Service
@@ -57,19 +56,34 @@ public class StorageService {
         }
     }
 
-    /** Only resolvable when the local backend is active — S3/Firebase URLs point straight at the provider. */
-    public Path resolve(String key) {
+    /**
+     * Fetch a stored object's bytes from whichever backend is active. The browser hits
+     * {@link MediaController} for this — it never talks to S3/Firebase directly — so the bucket
+     * can stay private and any credentials it needs live only on the backend.
+     */
+    public StoredFile read(String key) {
         if (key == null || key.contains("..") || key.contains("/") || key.contains("\\")) {
             throw ApiException.notFound("File not found.");
         }
-        if (backend instanceof LocalStorageBackend local) {
-            return local.resolve(key);
+        StoredFile file;
+        try {
+            file = backend.read(key);
+        } catch (IOException | RuntimeException e) {
+            throw ApiException.serverError("Could not read the image. Please try again.");
         }
-        throw ApiException.notFound("File not found.");
+        if (file == null) {
+            throw ApiException.notFound("File not found.");
+        }
+        return file;
     }
 
+    /** Every backend is served back out through {@link MediaController} at {@code publicBaseUrl/key}. */
     public String publicUrl(String key) {
-        return backend.publicUrl(key);
+        if (key == null) {
+            return null;
+        }
+        String base = properties.getStorage().getPublicBaseUrl();
+        return (base.endsWith("/") ? base : base + "/") + key;
     }
 
     private boolean hasMagic(byte[] bytes, String contentType) {

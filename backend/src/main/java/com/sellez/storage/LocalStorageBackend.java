@@ -25,16 +25,11 @@ public class LocalStorageBackend implements StorageBackend {
     }
 
     @Override
-    public String publicUrl(String key) {
-        if (key == null) {
+    public StoredFile read(String key) throws IOException {
+        Path path = Path.of(properties.getStorage().getLocalPath()).resolve(key);
+        if (!Files.exists(path)) {
             return null;
         }
-        String base = properties.getStorage().getPublicBaseUrl();
-        return (base.endsWith("/") ? base : base + "/") + key;
-    }
-
-    /** Only meaningful for this backend — resolves a key to the on-disk path {@link MediaController} serves. */
-    Path resolve(String key) {
-        return Path.of(properties.getStorage().getLocalPath()).resolve(key);
+        return new StoredFile(Files.readAllBytes(path), Files.probeContentType(path));
     }
 }

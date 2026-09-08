@@ -94,6 +94,7 @@ public class SellezProperties {
         /** Which backend actually persists uploaded files: "local", "s3", or "firebase". */
         private String type = "local";
         private String localPath = "./uploads";
+        /** Base URL of {@code MediaController} — every backend's files are served back through it. */
         private String publicBaseUrl = "http://localhost:8080/api/media";
         private int imageMaxDimension = 1600;
         private float imageQuality = 0.82f;
@@ -124,8 +125,6 @@ public class SellezProperties {
             private String secretKey = "";
             /** SeaweedFS/MinIO-style servers typically need path-style bucket addressing. */
             private boolean pathStyleAccess = false;
-            /** Optional override for the URL handed back to clients (e.g. a CDN in front of the bucket). */
-            private String publicBaseUrl = "";
 
             public String getBucket() { return bucket; }
             public void setBucket(String bucket) { this.bucket = bucket; }
@@ -139,12 +138,10 @@ public class SellezProperties {
             public void setSecretKey(String secretKey) { this.secretKey = secretKey; }
             public boolean isPathStyleAccess() { return pathStyleAccess; }
             public void setPathStyleAccess(boolean pathStyleAccess) { this.pathStyleAccess = pathStyleAccess; }
-            public String getPublicBaseUrl() { return publicBaseUrl; }
-            public void setPublicBaseUrl(String publicBaseUrl) { this.publicBaseUrl = publicBaseUrl; }
         }
 
         public static class Firebase {
-            /** Firebase Storage bucket name, e.g. my-project.appspot.com. */
+            /** Firebase Storage bucket name (no gs:// prefix), e.g. my-project.firebasestorage.app. */
             private String bucket = "";
             /** Path to a service-account JSON key; blank falls back to Application Default Credentials. */
             private String credentialsPath = "";

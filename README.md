@@ -29,9 +29,11 @@ Every image a user uploads (listing photos, chat images, appeal evidence) is dow
 
 Where the bytes actually land is chosen by `STORAGE_TYPE` (`sellez.storage.type` in `application.yml`), with one `StorageBackend` implementation per option:
 
-- **`local`** (default) — written to `STORAGE_LOCAL_PATH` on disk and served back out through `GET /api/media/{key}`.
+- **`local`** (default) — written to `STORAGE_LOCAL_PATH` on disk.
 - **`s3`** — written via the plain AWS SDK v2 `S3Client`. Pointing `S3_ENDPOINT` at a self-hosted S3-compatible server (SeaweedFS, MinIO, ...) instead of leaving it blank is enough to swap providers — nothing else in the code is AWS-specific. Leave `S3_ACCESS_KEY`/`S3_SECRET_KEY` blank against an unauthenticated dev gateway (e.g. a bare SeaweedFS S3 gateway); leave them blank with no custom endpoint to fall back to the SDK's normal AWS credential chain instead.
-- **`firebase`** — written to a Firebase Storage bucket via the Firebase Admin SDK.
+- **`firebase`** — written to a Firebase Storage bucket via the Firebase Admin SDK. `FIREBASE_STORAGE_BUCKET` is the bare bucket name (no `gs://` prefix), e.g. `my-project.firebasestorage.app`. `FIREBASE_CREDENTIALS_PATH` points at a service-account JSON key; leave it blank to use Application Default Credentials (the runtime service account on Firebase App Hosting / Cloud Run).
+
+**Reads always go through the backend.** Whatever backend is active, the browser only ever loads images from `GET /api/media/{key}` — `MediaController` fetches the bytes from the backend (authenticated the same way writes are, for S3/Firebase) and streams them back. The storage bucket itself never needs to be public, and no S3/Firebase credentials or URLs reach the client. `STORAGE_PUBLIC_BASE_URL` is the base URL of that endpoint, prepended to every stored key.
 
 See the [environment variables](#backend-environment-variables) table below for the full set of `S3_*`/`FIREBASE_*` options.
 
@@ -114,7 +116,7 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 | `SUPER_ADMIN_EMAILS` | `owner@sellez.local` | Comma-separated emails granted super-admin role |
 | `STORAGE_TYPE` | `local` | Which backend stores uploads: `local`, `s3`, or `firebase` |
 | `STORAGE_LOCAL_PATH` | `./uploads` | Local disk path for uploaded images (`local` only) |
-| `STORAGE_PUBLIC_BASE_URL` | `http://localhost:8080/api/media` | Public base URL for serving stored images (`local` only) |
+| `STORAGE_PUBLIC_BASE_URL` | `http://localhost:8080/api/media` | Base URL of `GET /api/media/{key}`, which serves images for every backend; prepended to each stored key |
 | `STORAGE_IMAGE_MAX_DIMENSION` | `1600` | Every uploaded image is downscaled so its longest edge is at most this many pixels (never upscaled) |
 | `STORAGE_IMAGE_QUALITY` | `0.82` | JPEG re-encode quality (0–1) applied to every uploaded image, regardless of backend |
 | `S3_BUCKET` | *(empty)* | Bucket name (`s3` only) |
@@ -123,8 +125,7 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 | `S3_ACCESS_KEY` | *(empty)* | Access key; leave both key vars empty for an unauthenticated dev gateway, or omit both to use the AWS SDK's default credential chain (`s3` only) |
 | `S3_SECRET_KEY` | *(empty)* | Secret key (`s3` only) |
 | `S3_PATH_STYLE_ACCESS` | `false` | Force path-style bucket addressing (`https://host/bucket/key`) — needed by most self-hosted S3-compatible servers (`s3` only) |
-| `S3_PUBLIC_BASE_URL` | *(empty)* | Override the URL handed back to clients, e.g. a CDN in front of the bucket; derived from the bucket/endpoint if empty (`s3` only) |
-| `FIREBASE_STORAGE_BUCKET` | *(empty)* | Firebase Storage bucket name, e.g. `my-project.appspot.com` (`firebase` only) |
+| `FIREBASE_STORAGE_BUCKET` | *(empty)* | Firebase Storage bucket name, no `gs://` prefix, e.g. `my-project.firebasestorage.app` (`firebase` only) |
 | `FIREBASE_CREDENTIALS_PATH` | *(empty)* | Path to a service-account JSON key; empty falls back to Application Default Credentials (`firebase` only) |
 | `EMAIL_PROVIDER` | `logging` | `logging` (console) or the AWS SES-backed provider |
 | `EMAIL_FROM` | `noreply@sellez.local` | From address for outgoing email |

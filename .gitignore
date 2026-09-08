@@ -9,6 +9,8 @@
 frontend/.env
 frontend/.env.local
 backend/.env
+backend/src/main/resources/application-dev.yml
+backend/src/main/resources/application-local.yml
 uploads/
 *.log
 node_modules/
