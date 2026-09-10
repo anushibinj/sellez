@@ -73,6 +73,8 @@ sellez:
     provider: ${EMAIL_PROVIDER:logging}
     from: ${EMAIL_FROM:noreply@sellez.local}
     aws-region: ${AWS_REGION:us-east-1}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
     sns-topic-arn: ${SNS_TOPIC_ARN:}
   listing:
     max-images: ${LISTING_MAX_IMAGES:6}

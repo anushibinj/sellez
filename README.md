@@ -127,10 +127,12 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 | `S3_PATH_STYLE_ACCESS` | `false` | Force path-style bucket addressing (`https://host/bucket/key`) — needed by most self-hosted S3-compatible servers (`s3` only) |
 | `FIREBASE_STORAGE_BUCKET` | *(empty)* | Firebase Storage bucket name, no `gs://` prefix, e.g. `my-project.firebasestorage.app` (`firebase` only) |
 | `FIREBASE_CREDENTIALS_PATH` | *(empty)* | Path to a service-account JSON key; empty falls back to Application Default Credentials (`firebase` only) |
-| `EMAIL_PROVIDER` | `logging` | `logging` (console) or the AWS SES-backed provider |
-| `EMAIL_FROM` | `noreply@sellez.local` | From address for outgoing email |
+| `EMAIL_PROVIDER` | `logging` | `logging` (console), `ses` (AWS SES), or `sns` (publish to an SNS topic) |
+| `EMAIL_FROM` | `noreply@sellez.local` | From address for outgoing email; must be a verified SES identity when `EMAIL_PROVIDER=ses` |
 | `AWS_REGION` | `us-east-1` | AWS region for SES/SNS |
-| `SNS_TOPIC_ARN` | *(empty)* | SNS topic ARN for notifications |
+| `AWS_ACCESS_KEY_ID` | *(empty)* | SES/SNS access key; blank falls back to the AWS default credential chain (IAM role, `~/.aws`, …). Also settable as `sellez.email.access-key` in `application-dev.yml` |
+| `AWS_SECRET_ACCESS_KEY` | *(empty)* | SES/SNS secret key; pairs with `AWS_ACCESS_KEY_ID`, or set as `sellez.email.secret-key` |
+| `SNS_TOPIC_ARN` | *(empty)* | SNS topic ARN for notifications (`sns` only) |
 | `LISTING_MAX_IMAGES` | `6` | Max images per listing |
 | `LISTING_CURRENCIES` | `USD,INR,EUR,GBP,AED,CAD,AUD` | Currencies sellers can choose from |
 | `LISTING_DEFAULT_CURRENCY` | `USD` | Default listing currency |

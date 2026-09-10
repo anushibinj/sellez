@@ -4,10 +4,15 @@ import com.sellez.config.SellezProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ses.SesClient;
+import software.amazon.awssdk.services.ses.SesClientBuilder;
 import software.amazon.awssdk.services.ses.model.*;
 import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.SnsClientBuilder;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 @Service
@@ -117,7 +122,9 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private void sendSes(String to, String subject, String htmlBody) {
-        try (SesClient client = SesClient.builder().region(Region.of(properties.getEmail().getAwsRegion())).build()) {
+        SesClientBuilder builder = SesClient.builder().region(Region.of(properties.getEmail().getAwsRegion()));
+        applyCredentials(builder);
+        try (SesClient client = builder.build()) {
             client.sendEmail(SendEmailRequest.builder()
                     .source(properties.getEmail().getFrom())
                     .destination(Destination.builder().toAddresses(to).build())
@@ -132,10 +139,28 @@ public class NotificationServiceImpl implements NotificationService {
     private void sendSns(String to, String subject, String htmlBody) {
         String topic = properties.getEmail().getSnsTopicArn();
         String payload = "{\"to\":\"" + to + "\",\"subject\":\"" + subject.replace("\"", "'") + "\",\"html\":true}";
-        try (SnsClient client = SnsClient.builder().region(Region.of(properties.getEmail().getAwsRegion())).build()) {
+        SnsClientBuilder builder = SnsClient.builder().region(Region.of(properties.getEmail().getAwsRegion()));
+        applyCredentials(builder);
+        try (SnsClient client = builder.build()) {
             client.publish(PublishRequest.builder().topicArn(topic).subject(subject).message(payload + htmlBody).build());
         }
         log.debug("Published SNS email event for {}", to);
+    }
+
+    /**
+     * Applies explicit SES/SNS credentials from {@code sellez.email.access-key} /
+     * {@code sellez.email.secret-key} (which default to the AWS_ACCESS_KEY_ID /
+     * AWS_SECRET_ACCESS_KEY env vars) when both are set. When they are blank the builder is
+     * left untouched, so the AWS SDK's default credential chain (env vars, container/instance
+     * IAM role, {@code ~/.aws/credentials}, ...) applies as before.
+     */
+    private void applyCredentials(AwsClientBuilder<?, ?> builder) {
+        String accessKey = properties.getEmail().getAccessKey();
+        String secretKey = properties.getEmail().getSecretKey();
+        if (accessKey != null && !accessKey.isBlank() && secretKey != null && !secretKey.isBlank()) {
+            builder.credentialsProvider(StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(accessKey, secretKey)));
+        }
     }
 
     private String html(String title, String inner) {

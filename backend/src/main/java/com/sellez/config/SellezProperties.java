@@ -157,6 +157,9 @@ public class SellezProperties {
         private String provider = "logging";
         private String from = "noreply@sellez.local";
         private String awsRegion = "us-east-1";
+        /** SES/SNS access key; blank falls back to the AWS SDK's default credential chain. */
+        private String accessKey = "";
+        private String secretKey = "";
         private String snsTopicArn = "";
         public String getProvider() { return provider; }
         public void setProvider(String provider) { this.provider = provider; }
@@ -164,6 +167,10 @@ public class SellezProperties {
         public void setFrom(String from) { this.from = from; }
         public String getAwsRegion() { return awsRegion; }
         public void setAwsRegion(String awsRegion) { this.awsRegion = awsRegion; }
+        public String getAccessKey() { return accessKey; }
+        public void setAccessKey(String accessKey) { this.accessKey = accessKey; }
+        public String getSecretKey() { return secretKey; }
+        public void setSecretKey(String secretKey) { this.secretKey = secretKey; }
         public String getSnsTopicArn() { return snsTopicArn; }
         public void setSnsTopicArn(String snsTopicArn) { this.snsTopicArn = snsTopicArn; }
     }
