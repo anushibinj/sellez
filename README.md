@@ -164,3 +164,4 @@ The project is configured for Firebase App Hosting (`firebase.json`, `apphosting
 ```bash
 docker build -t sellez-backend backend
 ```
+
