@@ -159,4 +159,8 @@ cd frontend && npm run lint && npm run build
 
 ## Deployment
 
-The project is configured for Firebase App Hosting (`firebase.json`, `apphosting.yaml`, `.firebaserc`) with a standalone Next.js build (`output: "standalone"` in `frontend/next.config.ts`) and a Docker image for the backend (`backend/Dockerfile`).
+The project is configured for Firebase App Hosting (`firebase.json`, `apphosting.yaml`, `.firebaserc`) with a standalone Next.js build (`output: "standalone"` in `frontend/next.config.ts`) and a Docker image for the backend (`backend/Dockerfile`). The Dockerfile is multi-stage: it builds the JAR from source with Maven (no prebuilt `target/` JAR needed), then copies it into a slim JRE image. Build from the `backend/` directory:
+
+```bash
+docker build -t sellez-backend backend
+```
