@@ -16,8 +16,8 @@ uploads/
 node_modules/
 frontend/.next/
 frontend/out/
-backend/target/
-backend/.mvn/wrapper/maven-wrapper.jar
+backend/build/
+backend/.gradle/
 coverage/
 .firebase/
 firebase-debug.log
