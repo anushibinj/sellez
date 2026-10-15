@@ -8,7 +8,7 @@ See [PRD.md](PRD.md) for the full product spec.
 
 ## Tech stack
 
-**Backend** — Java 17, Spring Boot 3.5 (Web, Security, Data JPA, WebSocket, Actuator), PostgreSQL, Flyway migrations, JWT auth (jjwt), AWS SES/SNS for email/notifications, pluggable file storage (local disk, S3-compatible, or Firebase Storage) with Thumbnailator for image compression, Maven.
+**Backend** — Java 17, Spring Boot 3.5 (Web, Security, Data JPA, WebSocket, Actuator), PostgreSQL, Flyway migrations, JWT auth (jjwt), AWS SES/SNS for email/notifications, pluggable file storage (local disk, S3-compatible, or Firebase Storage) with Thumbnailator for image compression, Gradle.
 
 **Frontend** — Next.js 15 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS 4, TanStack Query, React Hook Form + Zod, Radix UI, STOMP over WebSocket for chat.
 
@@ -40,7 +40,7 @@ See the [environment variables](#backend-environment-variables) table below for 
 ## Prerequisites
 
 - Java 17+
-- Maven 3.9+
+- Gradle is bundled via the Gradle Wrapper (`backend/gradlew`) — no separate install needed
 - Node.js 20+
 - Docker (for local PostgreSQL) — or a PostgreSQL 16 instance of your own
 
@@ -58,7 +58,7 @@ This starts PostgreSQL 16 on port 5432 with the credentials from `.env` (see `.e
 
 ```bash
 cd backend
-mvn spring-boot:run
+./gradlew bootRun
 ```
 
 Runs on `http://localhost:8080`. Configuration lives in `backend/src/main/resources/application.yml`, all overridable via environment variables (see [Backend environment variables](#backend-environment-variables) below). By default, OTP emails are just logged to the console (`EMAIL_PROVIDER=logging`), so you can sign in locally without configuring AWS SES — check the backend logs for the code.
@@ -151,7 +151,7 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 
 ```bash
 # Backend
-cd backend && mvn clean test
+cd backend && ./gradlew clean test
 
 # Frontend
 cd frontend && npm run lint && npm run build
@@ -159,7 +159,7 @@ cd frontend && npm run lint && npm run build
 
 ## Deployment
 
-The project is configured for Firebase App Hosting (`firebase.json`, `apphosting.yaml`, `.firebaserc`) with a standalone Next.js build (`output: "standalone"` in `frontend/next.config.ts`) and a Docker image for the backend (`backend/Dockerfile`). The Dockerfile is multi-stage: it builds the JAR from source with Maven (no prebuilt `target/` JAR needed), then copies it into a slim JRE image. Build from the `backend/` directory:
+The project is configured for Firebase App Hosting (`firebase.json`, `apphosting.yaml`, `.firebaserc`) with a standalone Next.js build (`output: "standalone"` in `frontend/next.config.ts`) and a Docker image for the backend (`backend/Dockerfile`). The Dockerfile is multi-stage: it builds the JAR from source with Gradle (no prebuilt `build/libs/` JAR needed), then copies it into a slim JRE image. Build from the `backend/` directory:
 
 ```bash
 docker build -t sellez-backend backend

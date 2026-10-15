@@ -1,5 +1,5 @@
 - Always run tests at the end of any code change to make sure nothing is broken. If any test fails, fix the errors before doing anything else. If a test cannot be fixed immediately, document the issue in TODO.md and continue. The following tests are mandatory:
-    - backend - mvn clean test (or gradle clean test)
+    - backend - ./gradlew clean test (run from `backend/`)
     - frontend - pnpm lint && pnpm build
 - Always update the following files whenever code changes affect documentation, environment variables, or architecture:
     - README.md
