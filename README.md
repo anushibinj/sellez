@@ -104,7 +104,7 @@ Visit `http://localhost:3000`, enter any email, and grab the OTP code from the b
 | `ACCESS_TOKEN_MINUTES` | `15` | Access token lifetime |
 | `REFRESH_TOKEN_DAYS` | `30` | Refresh token lifetime |
 | `COOKIE_SECURE` | `false` | Set cookies as `Secure` |
-| `COOKIE_SAMESITE` | `Lax` | Cookie `SameSite` policy |
+| `COOKIE_SAMESITE` | `Lax` | Cookie `SameSite` policy (applies to the auth cookies and the `XSRF-TOKEN` CSRF cookie) |
 | `COOKIE_DOMAIN` | *(empty)* | Cookie domain |
 | `ACCESS_COOKIE_NAME` | `sellez_access` | Access token cookie name |
 | `REFRESH_COOKIE_NAME` | `sellez_refresh` | Refresh token cookie name |

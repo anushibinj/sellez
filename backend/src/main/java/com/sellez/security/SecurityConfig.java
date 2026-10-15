@@ -37,6 +37,15 @@ public class SecurityConfig {
         csrfRepo.setCookiePath("/");
         csrfRepo.setCookieName("XSRF-TOKEN");
         csrfRepo.setHeaderName("X-XSRF-TOKEN");
+        // The CSRF cookie must follow the same Secure/SameSite/Domain policy as the auth cookies; otherwise browsers
+        // drop it on cross-site requests (frontend and backend on different sites) and every mutating call gets a 403.
+        SellezProperties.Security sec = properties.getSecurity();
+        csrfRepo.setCookieCustomizer(cookie -> {
+            cookie.secure(sec.isCookieSecure()).sameSite(sec.getCookieSamesite());
+            if (sec.getCookieDomain() != null && !sec.getCookieDomain().isBlank()) {
+                cookie.domain(sec.getCookieDomain());
+            }
+        });
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName("_csrf");
 
