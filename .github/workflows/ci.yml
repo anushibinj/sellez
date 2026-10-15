@@ -14,10 +14,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-          cache: maven
+      - uses: gradle/actions/setup-gradle@v4
       - name: Test backend
         working-directory: backend
-        run: mvn -B test
+        run: ./gradlew --no-daemon clean test
 
   frontend:
     runs-on: ubuntu-latest
